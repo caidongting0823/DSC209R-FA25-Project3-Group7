@@ -590,13 +590,13 @@ const normId = v => String(v).padStart(2, "0");
         g.selectAll("circle").data(pts).join("circle")
           .attr("class", "quake nonScaleStroke")
           // divide by 's' so circles keep the same *screen* size despite the group scale
-          .attr("r", d => (sizeScale(d.mag ?? magExt[0])) / s)
+          .attr("r", d => dataRadius(d.mag, 1) / s)   // insets don't zoom with the main layer
           .attr("transform", d => {
             const p = projection([d.lon, d.lat]);
             return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
           })
           .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-          .attr("fill-opacity", .85)
+          .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
           .on("mousemove", (event, d) => {
             const [x,y] = d3.pointer(event, document.querySelector(".view"));
             tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(`
@@ -645,8 +645,28 @@ const normId = v => String(v).padStart(2, "0");
   const magExt    = safeExtent(points.map(d=>d.mag).filter(v=>v!=null && isFinite(v)), [4.5,9.5]);
   const yearExt   = safeExtent(points.map(d=>d.year).filter(v=>v!=null && isFinite(v)), [1900, 2025]);
 
-  const color = d3.scaleSequential([dDomMin, dDomMax], d3.interpolateTurbo);
-  const sizeScale = d3.scaleSqrt().domain(magExt).range([1.8, 11]);
+  // --- Visual encodings ---
+  // Depth: shallow = light, deep = dark (works well on a light theme)
+  const color = d3.scaleSequential([dDomMin, dDomMax], d3.interpolateBlues);
+
+  // Magnitude: sqrt area mapping; tuned for readability
+  const sizeScale = d3.scaleSqrt().domain(magExt).range([2.6, 12]);
+
+  // Make larger quakes a bit more opaque to pop through clusters
+  const alphaScale = d3.scaleLinear().domain(magExt).range([0.35, 0.90]).clamp(true);
+
+  // Enforce a minimum on-screen radius so small events don’t vanish when zoomed out
+  let currK = 1;                  // current zoom.k (updated in the zoom handler)
+  const MIN_SCREEN_R = 2.4;       // px, minimum visible size
+  const MAX_SCREEN_R = 14;        // px, cap to avoid overwhelming at low zoom
+
+  const dataRadius = (mag, k = currK) => {
+    const r = sizeScale(mag ?? magExt[0]);
+    const ksafe = Math.max(1e-6, k);
+    // Convert desired screen-space clamp to data-space radius by dividing by k
+    return Math.min(Math.max(r, MIN_SCREEN_R / ksafe), MAX_SCREEN_R / ksafe);
+  };
+
 
   window.addEventListener("resize", ()=>{
       ({width,height}=sizeSVG());
@@ -868,12 +888,12 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
 
       sel.enter().append("circle")
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
-        .attr("r", d => sizeScale(d.mag ?? magExt[0]))
+        .attr("r", d => dataRadius(d.mag))
         .attr("transform", d => {
           const p = projection([d.lon, d.lat]); return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
         })
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-        .attr("fill-opacity", .85)
+        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
         .on("mousemove", (event, d) => {
           const [x,y] = d3.pointer(event, document.querySelector(".view"));
           tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(`
@@ -885,9 +905,10 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
         .on("mouseleave", ()=> tooltip.style("opacity", 0));
 
       sel
-        .attr("r", d => sizeScale(d.mag ?? magExt[0]))
+        .attr("r", d => dataRadius(d.mag))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
+        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
         .attr("transform", d => {
           const p = projection([d.lon, d.lat]); return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
         });
@@ -938,7 +959,13 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
 
 
   /* ---------- Zoom ---------- */
-  const zoom = d3.zoom().scaleExtent([0.9, 8]).on("zoom", (ev)=> zoomLayer.attr("transform", ev.transform));
+  const zoom = d3.zoom().scaleExtent([0.9, 8]).on("zoom", (ev)=>{
+    currK = ev.transform.k;
+    zoomLayer.attr("transform", ev.transform);
+    // Update radii so small dots keep the minimum screen size at every zoom
+    ptsG.selectAll("circle.quake").attr("r", d => dataRadius(d.mag, currK));
+  });
+
   svg.call(zoom).on("click", (e)=>{
     if (e.target === svg.node()) svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
   });
