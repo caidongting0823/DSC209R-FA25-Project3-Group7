@@ -228,6 +228,33 @@
     #svg, #svg g { will-change: transform; }
     .quake { shape-rendering: geometricPrecision; }
 
+    /* Discover the Century */
+    .discover { display:grid; gap:8px; }
+    .discover-btn{
+      width:100%; padding:8px 10px;
+      background:#f6f8fe; color:#1f2937;
+      border:1px solid var(--grid); border-radius:8px;
+      font-size:13px; font-weight:600; cursor:pointer;
+      transition:all .15s ease;
+    }
+    .discover-btn:hover{ background:#ecf2ff }
+    .discover-btn:active{ transform:scale(0.98) }
+
+    /* Story mode styling */
+    .quake.dimmed{
+      opacity:.06 !important;          /* beats .nodata opacity */
+      fill-opacity:.06 !important;
+      stroke-opacity:.06 !important;
+      pointer-events:none;              /* no tooltip on dimmed dots */
+    }
+
+    .quake.story-hi{
+      opacity:1 !important;
+      fill-opacity:1 !important;
+      stroke:#111;                      /* crisp outline for contrast */
+      stroke-width:2.5px;
+    }
+
 </style>
 
 
@@ -298,6 +325,16 @@
         <div class="label" style="opacity:.85;">Note: Click empty map to reset zoom.</div>
       </div>
 
+      <div class="section">
+          <div class="label">Discover the Century</div>
+          <div class="discover">
+            <button class="discover-btn" id="discoverTop10">Top 10 Earthquakes</button>
+            <button class="discover-btn" id="discoverDeepest">Deepest Earthquake</button>
+            <button class="discover-btn" id="discoverShallowest">Shallowest Earthquake</button>
+            <button class="discover-btn" id="discoverRecent">Most Recent Earthquake</button>
+          </div>
+      </div>
+
       <div class="section" style="margin-top: 10px;">
         <button id="resetBtn">🔄 Reset Filters</button>
       </div>
@@ -335,6 +372,101 @@ const normId = v => String(v).padStart(2, "0");
       drawInsetsTopRow();
     });
   }
+
+/* ---------- Story mode (Discover the Century) ---------- */
+let storyMode = null; // 'top10' | 'deepest' | 'shallowest' | 'recent' | null
+
+function clearStory(){
+  storyMode = null;
+  d3.selectAll("circle.quake").classed("dimmed", false).classed("story-hi", false);
+}
+
+function fadeAndHighlight(selArray){
+  const set = new Set(selArray);
+  d3.selectAll("circle.quake").classed("dimmed", true).classed("story-hi", false);
+  const hi = d3.selectAll("circle.quake")
+    .filter(d => set.has(d))
+    .classed("dimmed", false)
+    .classed("story-hi", true);
+  hi.raise();  // ensure highlights sit above dimmed dots
+}
+
+// Update sliders UI *without* triggering events (informational display of selection bounds)
+function setMagUI(lo, hi){
+  const loR = document.getElementById('magMinR'), hiR = document.getElementById('magMaxR');
+  const loN = document.getElementById('magMinN'), hiN = document.getElementById('magMaxN');
+  const label = document.getElementById('magVals');
+  const dom = sizeScale.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+  loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+  loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+  label.textContent = `${(+lo).toFixed(1)} – ${(+hi).toFixed(1)}`;
+}
+
+function setDepthUI(lo, hi){
+  const loR = document.getElementById('depthMinR'), hiR = document.getElementById('depthMaxR');
+  const loN = document.getElementById('depthMinN'), hiN = document.getElementById('depthMaxN');
+  const label = document.getElementById('depthVals');
+  const dom = color.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+  loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+  loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+  label.textContent = `${lo} – ${hi}`;
+}
+
+function setYearUI(lo, hi){
+  const loR = document.getElementById('yearMinR'), hiR = document.getElementById('yearMaxR');
+  const loN = document.getElementById('yearMinN'), hiN = document.getElementById('yearMaxN');
+  const label = document.getElementById('yearVals');
+  const dom = yearExt; const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+  loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+  loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+  label.textContent = `${lo} – ${hi}`;
+}
+
+// Compute selections
+function storySelect(kind){
+  if (kind === "top10"){
+    return points.filter(d=>isFinite(d.mag)).sort((a,b)=> d3.descending(a.mag,b.mag)).slice(0,10);
+  } else if (kind === "deepest"){
+    const m = d3.max(points.filter(d=>d.depth!=null), d=>d.depth);
+    return points.filter(d=>d.depth!=null && d.depth===m);
+  } else if (kind === "shallowest"){
+    const m = d3.min(points.filter(d=>d.depth!=null), d=>d.depth);
+    return points.filter(d=>d.depth!=null && d.depth===m);
+  } else if (kind === "recent"){
+    const getTS = d=> d.time ? Date.parse(d.time) : -Infinity;
+    const m = d3.max(points, getTS);
+    return points.filter(d=> getTS(d)===m);
+  }
+  return [];
+}
+
+// Apply a story (full data visible; highlight selection; sliders reflect bounds)
+function applyStory(kind){
+  storyMode = kind;
+
+  // show all points (no filtering), keep current zoom
+  magRange = [sizeScale.domain()[0], sizeScale.domain()[1]];
+  depthRange = [color.domain()[0], color.domain()[1]];
+  yearRange = [yearExt[0], yearExt[1]];
+  render(); drawInsetsTopRow();
+
+  const sel = storySelect(kind);
+  if (!sel.length){ clearStory(); return; }
+
+  // Fade others, highlight selection
+  fadeAndHighlight(sel);
+
+  // Update slider UI to selection bounds (no filtering change)
+  const magLo = d3.min(sel, d=>d.mag), magHi = d3.max(sel, d=>d.mag);
+  const depLo = d3.min(sel, d=>d.depth ?? color.domain()[0]);
+  const depHi = d3.max(sel, d=>d.depth ?? color.domain()[1]);
+  const yrLo  = d3.min(sel, d=>d.year), yrHi  = d3.max(sel, d=>d.year);
+
+  setMagUI(+magLo.toFixed(1), +magHi.toFixed(1));
+  setDepthUI(Math.round(depLo), Math.round(depHi));
+  setYearUI(yrLo, yrHi);
+}
+
 
   /* ---------- State maps ---------- */
   const STATE_ABBR_TO_FULL = {
@@ -790,6 +922,21 @@ const normId = v => String(v).padStart(2, "0");
   initDual({ domain:[dDomMin,dDomMax], step:10, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; requestRepaint(); }});
   initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; requestRepaint(); }});
 
+
+  // Cancel story mode when user manually touches any filter
+  [
+    "magMinR","magMaxR","magMinN","magMaxN",
+    "depthMinR","depthMaxR","depthMinN","depthMaxN",
+    "yearMinR","yearMaxR","yearMinN","yearMaxN",
+    "includeNA"
+  ].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", clearStory);
+    el.addEventListener("change", clearStory);
+  });
+
+
   /* ---------- Location: suggestions + chips ---------- */
   const locInput = document.getElementById("locInput");
   const locPanel = document.getElementById("locSuggest");
@@ -817,7 +964,7 @@ const normId = v => String(v).padStart(2, "0");
       const span = document.createElement("span");
       span.className = "chip";
       span.innerHTML = `${label} <span class="x" title="Remove">×</span>`;
-      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); requestRepaint(); };
+      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); clearStory(); requestRepaint(); };
       chipsBox.appendChild(span);
     }
   }
@@ -825,9 +972,9 @@ const normId = v => String(v).padStart(2, "0");
       if (!label) return;
       selectedLocs.add(label);
       renderChips();
+      clearStory();
       requestRepaint();
   }
-
 
   function renderSuggestions(qRaw){
     const qTrim = (qRaw||"").trim();
@@ -1062,9 +1209,19 @@ const normId = v => String(v).padStart(2, "0");
   render();
   drawInsetsTopRow();
 
+  // --- Discover the Century buttons ---
+  document.getElementById("discoverTop10").addEventListener("click", ()=> applyStory("top10"));
+  document.getElementById("discoverDeepest").addEventListener("click", ()=> applyStory("deepest"));
+  document.getElementById("discoverShallowest").addEventListener("click", ()=> applyStory("shallowest"));
+  document.getElementById("discoverRecent").addEventListener("click", ()=> applyStory("recent"));
+
+  // Default landing state: Top 10 highlighted
+  applyStory("top10");
+
 
   // ----- Reset Filters Button Logic -----
   document.getElementById("resetBtn").addEventListener("click", () => {
+    clearStory();
     function resetDual(minRangeId, maxRangeId, minNumId, maxNumId, minVal, maxVal) {
       const loR = document.getElementById(minRangeId);
       const hiR = document.getElementById(maxRangeId);
