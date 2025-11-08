@@ -578,6 +578,11 @@ const normId = v => String(v).padStart(2, "0");
       const xPos    = [marginX, marginX + boxW + gap, marginX + (boxW + gap)*2];
       const statesOrder = ["AK","HI","PR"];
 
+      // defs for inset clipping (once per redraw)
+      const insetDefs = svg.select("defs#insetDefs").empty()
+          ? svg.append("defs").attr("id","insetDefs")
+          : svg.select("defs#insetDefs");
+
       statesOrder.forEach((ab, i) => {
         const f = findStateByFIPS(FIPS[ab]);
         if (!f) return;
@@ -595,16 +600,29 @@ const normId = v => String(v).padStart(2, "0");
           .attr("x", rectX + 8).attr("y", rectY + 16)
           .text(ab);
 
+        // 1.5) Clip-path so content stays inside the dashed box
+        const cpId = `insetClip-${ab}`;
+        insetDefs.select(`#${cpId}`).remove();
+        insetDefs.append("clipPath")
+            .attr("id", cpId)
+            .attr("clipPathUnits", "userSpaceOnUse")
+            .append("rect")
+            .attr("x", rectX).attr("y", rectY)
+            .attr("width", boxW).attr("height", boxH);
+
+
         // 2) Fit the state geometry into the box using a group transform
         const b = path.bounds(f);
         const bW = b[1][0] - b[0][0], bH = b[1][1] - b[0][1];
-        const s  = 0.9 * Math.min(boxW / bW, boxH / bH);   // 10% padding
+        const s  = 0.86 * Math.min(boxW / bW, boxH / bH);  // a bit more padding
         const cx = (b[0][0] + b[1][0]) / 2;
         const cy = (b[0][1] + b[1][1]) / 2;
 
-        const g = insetsG.append("g")
-          .attr("transform",
-            `translate(${rectX + boxW/2},${rectY + boxH/2}) scale(${s}) translate(${-cx},${-cy})`);
+        // apply clip to a wrapper; keep the transform on an inner <g>
+        const wrap = insetsG.append("g").attr("clip-path", `url(#${cpId})`);
+        const g = wrap.append("g")
+            .attr("transform",
+                `translate(${rectX + boxW/2},${rectY + boxH/2}) scale(${s}) translate(${-cx},${-cy})`);
 
         // 3) State land
         g.append("path").datum(f)
