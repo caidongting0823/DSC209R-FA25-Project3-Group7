@@ -73,27 +73,52 @@
     .label{ color:var(--text); font-size:14px; font-weight:500 }
     .valuespan{ color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
 
-    .slider2{ position:relative; height:26px; display:flex; align-items:center; grid-column:1 / span 2 }
-    .slider2 input[type="range"]{
-      -webkit-appearance:none; appearance:none; position:absolute; width:100%;
-      background:none; pointer-events:none;
+    /* Sliders — fix vertical centering + stacking */
+    /* Sliders — perfect centering + correct stacking */
+    .slider2{
+        position:relative;
+        height:32px;                    /* room for 14px thumbs */
+        display:flex;
+        align-items:center;
+        grid-column:1 / span 2;
     }
+    .slider2 input[type="range"]{
+        -webkit-appearance:none; appearance:none;
+        position:absolute; left:0; right:0; top:50%;
+        transform:translateY(-50%);     /* center the track */
+        width:100%;
+        background:transparent;         /* lower gets gradient via JS */
+        pointer-events:none;            /* only thumbs accept events */
+    }
+
+    /* Track */
     .slider2 input[type="range"]::-webkit-slider-runnable-track{
-      height:5px; border-radius:999px; background:#e7efff;
+        height:6px; border-radius:999px; background:#e7efff;
     }
     .slider2 input[type="range"]::-moz-range-track{
-      height:5px; border-radius:999px; background:#e7efff;
+        height:6px; border-radius:999px; background:#e7efff;
     }
+
+    /* Thumbs (14px) — nudge up by -(14-6)/2 = -4px to center on a 6px track */
     .slider2 input[type="range"]::-webkit-slider-thumb{
-      -webkit-appearance:none; appearance:none;
-      width:12px; height:12px; border-radius:50%;
-      background:#fff; border:2px solid var(--accent); margin-top:-4px; pointer-events:auto;
+        -webkit-appearance:none; appearance:none;
+        width:14px; height:14px; border-radius:50%;
+        background:#fff; border:2px solid var(--accent);
+        margin-top:-4px;                /* exact optical centering */
+        pointer-events:auto;
     }
     .slider2 input[type="range"]::-moz-range-thumb{
-      width:12px; height:12px; border-radius:50%;
-      background:#fff; border:2px solid var(--accent); pointer-events:auto;
+        width:14px; height:14px; border-radius:50%;
+        background:#fff; border:2px solid var(--accent);
+        pointer-events:auto;
     }
-    .slider2 input.lower{ z-index:1 } .slider2 input.upper{ z-index:2 }
+
+    /* Layering: show both thumbs above the painted bar.
+       Make the UPPER track transparent so it never covers the gradient. */
+    .slider2 input.lower{ z-index:3 }
+    .slider2 input.upper{ z-index:4 }  /* upper thumb sits on top */
+    .slider2 input.upper::-webkit-slider-runnable-track{ background:transparent; }
+    .slider2 input.upper::-moz-range-track{ background:transparent; }
 
     .row.values{ grid-template-columns:1fr }
     .row.values .label{ display:none }
@@ -209,8 +234,8 @@
 </head>
 <body>
 <header>
-  <h1>US Earthquakes — Interactive Map</h1>
-  <div class="sub">Interactive D3.js map of U.S. earthquakes over the past 100 years (including Alaska, Hawaii & Puerto Rico/USVI). Each quake is a dot: larger for higher magnitude and color coded for depth. Hover tooltips to reveal details.</div>
+  <h1>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</h1>
+  <div class="sub">Interactive Map of 100 Years (1925 - 2025) of Seismic Activity Across America</div>
 </header>
 
 <div class="layout">
