@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>D3 US Earthquakes — Stable Map + Multi-select Locations</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://unpkg.com/d3-composite-projections@1.2.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 <style>
   :root { --bg:#0b0e14; --text:#e8eef7; --muted:#9fb0c6; --grid:#243142; --accent:#1f62d6; --panel:#0f141c; }
@@ -79,6 +80,14 @@
   #resetBtn:hover {background-color: #2b3c52; color: #ffffff; border-color: #4d6480;}
 
   #resetBtn:active {transform: scale(0.97);}
+
+  .inset { fill: none; stroke:#3b4a5c; stroke-width:1; shape-rendering:crispEdges }
+  .inset-label { fill: var(--muted); font-size:11px; pointer-events:none }
+
+  .insetBox{ fill:none; stroke:#5b6f88; stroke-width:1; stroke-dasharray:4 3; shape-rendering:crispEdges }
+  .insetTitle{ fill: var(--muted); font-size:12px; font-weight:600 }
+  .nonScaleStroke{ vector-effect: non-scaling-stroke }
+
 
 </style>
 </head>
@@ -219,6 +228,7 @@
   const mapG = zoomLayer.append("g");
   const ptsG = zoomLayer.append("g");
   const legendG = svg.append("g");
+  const insetsG = svg.append("g");
   const tooltip = d3.select("#tooltip");
 
   function sizeSVG(){
@@ -229,24 +239,33 @@
     return { width:w, height:h };
   }
   let { width, height } = sizeSVG();
-  window.addEventListener("resize", ()=>{ ({width,height}=sizeSVG()); updateProjection(); drawLegend(); render(); });
+  let insetBandH = 0; // dynamic height for the top inset strip
+  window.addEventListener("resize", ()=>{ ({width,height}=sizeSVG()); updateProjection(); drawLegend();
+      render(); drawInsetsTopRow();});
 
-  let projection = d3.geoAlbersUsa();
+  let projection = d3.geoAlbersUsaTerritories();
   let path = d3.geoPath(projection);
+
   function updateProjection(){
-    projection = d3.geoAlbersUsa().translate([width/2, height/2]).scale(Math.max(300, Math.min(width,height)*1.8));
+    insetBandH = Math.max(120, height * 0.26);        // top strip reserved for insets
+    const mapH = Math.max(100, height - insetBandH);   // height available for main map
+    projection = d3.geoAlbersUsaTerritories()
+                 .translate([width/2, insetBandH + mapH/2]) // center in lower band
+                 .scale(Math.max(300, Math.min(width, mapH) * 1.8));
     path = d3.geoPath(projection);
-    mapG.selectAll("path").attr("d",path);
+    mapG.selectAll("path").attr("d", path);
   }
+
 
   const us = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(r=>r.json());
   const states = topojson.feature(us, us.objects.states);
   const borders = topojson.mesh(us, us.objects.states, (a,b)=>a!==b);
+  const stateFeatures = topojson.feature(us, us.objects.states).features;
   mapG.append("path").datum(states).attr("class","states").attr("d", path);
   mapG.append("path").datum(borders).attr("class","state-borders").attr("d", path);
 
   /* ---------- Data ---------- */
-  const data = await d3.csv("data/us_earthquakes_m4.5.csv", d=>{
+  const data = await d3.csv("data/us_earthquakes_m4.5_cleaned.csv", d=>{
     const depth = (d.depth===""||d.depth==null)?null:+d.depth;
     const mag   = (d.mag===""  ||d.mag==null)?null:+d.mag;
     const lat=+d.latitude, lon=+d.longitude;
@@ -298,6 +317,93 @@
     d.locStAbbr= cs.stAbbr;
     d.locStFull= cs.stFull;
   });
+
+  // FIPS ids for states in us-atlas (AK=02, HI=15, PR=72)
+  // FIPS ids must be strings in us-atlas
+  const FIPS = { AK: "02", HI: "15", PR: "72" };
+
+  function zoomToBBox(b){
+    const [[x0,y0],[x1,y1]] = b;
+    const pad = 30;
+    const w = x1 - x0 + pad*2, h = y1 - y0 + pad*2;
+    const k = Math.min(width / w, height / h) * 0.9;
+    const cx = (x0 + x1)/2, cy = (y0 + y1)/2;
+    svg.transition().duration(600)
+      .call(zoom.transform,
+        d3.zoomIdentity
+          .translate(width/2, height/2)
+          .scale(k)
+          .translate(-cx, -cy));
+  }
+
+  function drawInsetsTopRow(){
+      insetsG.selectAll("*").remove();
+
+      const marginX = 12, marginY = 8, gap = 8;
+      const bandH   = insetBandH;                         // from updateProjection()
+      const boxW    = (width - marginX*2 - gap*2) / 3;    // three equal boxes across
+      const boxH    = bandH - marginY*2;
+      const xPos    = [marginX, marginX + boxW + gap, marginX + (boxW + gap)*2];
+      const statesOrder = ["AK","HI","PR"];
+
+      statesOrder.forEach((ab, i) => {
+        const f = stateFeatures.find(s => s.id === FIPS[ab]);
+        if (!f) return;
+
+        const rectX = xPos[i], rectY = marginY;
+
+        // 1) Dotted frame + label
+        insetsG.append("rect")
+          .attr("class", "insetBox")
+          .attr("x", rectX).attr("y", rectY)
+          .attr("width", boxW).attr("height", boxH);
+
+        insetsG.append("text")
+          .attr("class", "insetTitle")
+          .attr("x", rectX + 8).attr("y", rectY + 16)
+          .text(ab);
+
+        // 2) Fit the state geometry into the box using a group transform
+        const b = path.bounds(f);
+        const bW = b[1][0] - b[0][0], bH = b[1][1] - b[0][1];
+        const s  = 0.9 * Math.min(boxW / bW, boxH / bH);   // 10% padding
+        const cx = (b[0][0] + b[1][0]) / 2;
+        const cy = (b[0][1] + b[1][1]) / 2;
+
+        const g = insetsG.append("g")
+          .attr("transform",
+            `translate(${rectX + boxW/2},${rectY + boxH/2}) scale(${s}) translate(${-cx},${-cy})`);
+
+        // 3) State land
+        g.append("path").datum(f)
+          .attr("class", "states")
+          .attr("d", path);
+
+        // 4) Quakes within that state/territory (geoContains = robust)
+        const pts = points.filter(d => d3.geoContains(f, [d.lon, d.lat]));
+        g.selectAll("circle").data(pts).join("circle")
+          .attr("class", "quake nonScaleStroke")
+          // divide by 's' so circles keep the same *screen* size despite the group scale
+          .attr("r", d => (sizeScale(d.mag ?? magExt[0])) / s)
+          .attr("transform", d => {
+            const p = projection([d.lon, d.lat]);
+            return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
+          })
+          .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+          .attr("fill-opacity", .85)
+          .on("mousemove", (event, d) => {
+            const [x,y] = d3.pointer(event, document.querySelector(".view"));
+            tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(`
+              <div><b>${(d.mag!=null?d.mag.toFixed(1):"M?")}</b> — <span style="color:var(--muted)">${displayLabel(d)}</span></div>
+              <div>Depth: <b>${d.depth==null ? "N/A" : Math.round(d.depth)+" km"}</b></div>
+              <div style="color:var(--muted)">${d.time ? new Date(d.time).toUTCString() : ""}</div>
+            `);
+          })
+          .on("mouseleave", ()=> tooltip.style("opacity", 0));
+      });
+    }
+
+
 
   /* ---------- Location entries (canonical display) ---------- */
   const locMap = new Map();
@@ -580,6 +686,7 @@
   updateProjection();
   drawLegend();
   render();
+  drawInsetsTopRow();
 
 
   // ----- Reset Filters Button Logic -----
