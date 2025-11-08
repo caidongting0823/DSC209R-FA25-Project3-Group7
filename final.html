@@ -586,7 +586,7 @@ const normId = v => String(v).padStart(2, "0");
           .attr("d", path);
 
         // 4) Quakes within that state/territory (geoContains = robust)
-        const pts = points.filter(d => d3.geoContains(f, [d.lon, d.lat]));
+        const pts = points.filter(d => passesFilters(d) && d3.geoContains(f, [d.lon, d.lat]));
         g.selectAll("circle").data(pts).join("circle")
           .attr("class", "quake nonScaleStroke")
           // divide by 's' so circles keep the same *screen* size despite the group scale
@@ -720,9 +720,9 @@ const normId = v => String(v).padStart(2, "0");
     hiN.onchange=()=>sync(+loN.value,+hiN.value);
     sync(domain[0],domain[1],false); onChange([domain[0],domain[1]]);
   }
-  initDual({ domain:magExt, step:0.1, ids:{lowerRange:'magMinR',upperRange:'magMaxR',lowerNum:'magMinN',upperNum:'magMaxN'}, labelElId:'magVals', onChange:r=>{ magRange=r; render(); }});
-  initDual({ domain:[dDomMin,dDomMax], step:10, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; render(); }});
-  initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; render(); }});
+  initDual({ domain:magExt, step:0.1, ids:{lowerRange:'magMinR',upperRange:'magMaxR',lowerNum:'magMinN',upperNum:'magMaxN'}, labelElId:'magVals', onChange:r=>{ magRange=r; render(); drawInsetsTopRow(); }});
+  initDual({ domain:[dDomMin,dDomMax], step:10, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; render(); drawInsetsTopRow(); }});
+  initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; render(); drawInsetsTopRow(); }});
 
   /* ---------- Location: suggestions + chips ---------- */
   const locInput = document.getElementById("locInput");
@@ -751,15 +751,18 @@ const normId = v => String(v).padStart(2, "0");
       const span = document.createElement("span");
       span.className = "chip";
       span.innerHTML = `${label} <span class="x" title="Remove">×</span>`;
-      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); render(); };
+      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); render(); drawInsetsTopRow(); };
       chipsBox.appendChild(span);
     }
   }
   function addSelection(label){
-    if (!label) return;
-    selectedLocs.add(label);
-    renderChips(); render();
+      if (!label) return;
+      selectedLocs.add(label);
+      renderChips();
+      render();
+      drawInsetsTopRow();
   }
+
 
   function renderSuggestions(qRaw){
     const qTrim = (qRaw||"").trim();
@@ -838,7 +841,7 @@ const normId = v => String(v).padStart(2, "0");
     } else if (e.key === "Escape"){ closePanel(); }
   });
   document.addEventListener("click", (e)=>{ if (!document.querySelector(".locbox").contains(e.target)) closePanel(); });
-  document.getElementById("clearLoc").onclick = ()=>{ selectedLocs.clear(); renderChips(); render(); };
+  document.getElementById("clearLoc").onclick = ()=>{ selectedLocs.clear(); renderChips(); render(); drawInsetsTopRow(); };
 
   /* ---------- Legend ---------- */
     function drawLegend(){
@@ -932,25 +935,28 @@ const normId = v => String(v).padStart(2, "0");
       });
     }
 
+  function passesFilters(d){
+    const magOK   = (d.mag  != null && d.mag  >= magRange[0]   && d.mag  <= magRange[1]);
+    const yearOK  = (d.year != null && d.year >= yearRange[0]  && d.year <= yearRange[1]);
+    const depthOK = d.depth == null ? document.getElementById("includeNA").checked
+                                  : (d.depth >= depthRange[0] && d.depth <= depthRange[1]);
+
+    let locOK = true;
+    if (selectedLocs.size > 0){
+      const st  = (d.locStAbbr||"").toUpperCase();
+      const lbl = (d.locLabel||"");
+      locOK = (st && selectedLocs.has(st)) || (lbl && selectedLocs.has(lbl));
+    }
+    return magOK && yearOK && depthOK && locOK;
+  }
+
+
   /* ---------- Render ---------- */
   function render(){
     try{
       const allowNA = document.getElementById("includeNA").checked;
 
-      const filtered = points.filter(d => {
-        const magOK   = (d.mag  != null && d.mag  >= magRange[0]   && d.mag  <= magRange[1]);
-        const yearOK  = (d.year != null && d.year >= yearRange[0]  && d.year <= yearRange[1]);
-        const depthOK = d.depth == null ? document.getElementById("includeNA").checked
-                                  : (d.depth >= depthRange[0] && d.depth <= depthRange[1]);
-
-        let locOK = true;
-        if (selectedLocs.size > 0){
-          const st  = (d.locStAbbr||"").toUpperCase();
-          const lbl = (d.locLabel||"");
-        locOK = (st && selectedLocs.has(st)) || (lbl && selectedLocs.has(lbl));
-        }
-        return magOK && yearOK && depthOK && locOK && !d._inInset; // ← drop AK/HI/PR from main layer
-      });
+      const filtered = points.filter(d => passesFilters(d) && !d._inInset);
 
 const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+"|"+i);
 
@@ -1024,6 +1030,7 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
     }
 
     render();
+    drawInsetsTopRow();
   });
 
 
@@ -1039,7 +1046,7 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
     if (e.target === svg.node()) svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
   });
 
-  document.getElementById("includeNA").addEventListener("change", render);
+  document.getElementById("includeNA").addEventListener("change", ()=>{ render(); drawInsetsTopRow(); });
 })();
 </script>
 </body>
