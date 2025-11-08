@@ -646,26 +646,50 @@ const normId = v => String(v).padStart(2, "0");
   const yearExt   = safeExtent(points.map(d=>d.year).filter(v=>v!=null && isFinite(v)), [1900, 2025]);
 
   // --- Visual encodings ---
-  // Depth: shallow = light, deep = dark (works well on a light theme)
-  const color = d3.scaleSequential([dDomMin, dDomMax], d3.interpolateBlues);
 
-  // Magnitude: sqrt area mapping; tuned for readability
-  const sizeScale = d3.scaleSqrt().domain(magExt).range([2.6, 12]);
+  // ---- Depth color (nonlinear) ----
+  const depthRamp = d3.piecewise(d3.interpolateHcl, [
+    "#e4ffc6", // shallow: light green
+    "#fee08b", // yellow
+    "#fdae61", // orange
+    "#f46d43", // red
+    "#305cde"  // very deep: dark blue
+  ]);
 
-  // Make larger quakes a bit more opaque to pop through clusters
-  const alphaScale = d3.scaleLinear().domain(magExt).range([0.35, 0.90]).clamp(true);
+  // Breakpoints emphasize the shallow crust and upper mantle
+  //   0–15, 15–35, 35–70, 70–120, 120–200, 200–275 km
+  // Range values allocate *more* of the color ramp to shallow bins.
+  const depthWarp = d3.scaleLinear()
+    .domain([dDomMin,   15,   35,   70,   120,   200,   dDomMax])   // km
+    .range ([0.00,    0.30, 0.48, 0.66, 0.82,  0.93,   1.00])      // ramp t
+    .clamp(true);
 
-  // Enforce a minimum on-screen radius so small events don’t vanish when zoomed out
-  let currK = 1;                  // current zoom.k (updated in the zoom handler)
-  const MIN_SCREEN_R = 2.4;       // px, minimum visible size
-  const MAX_SCREEN_R = 14;        // px, cap to avoid overwhelming at low zoom
+  // Compose: scaleSequential normalizes x→t, we reconstruct depth from t,
+  // then apply the warp → ramp. Keeps .domain() working for legend, sliders.
+  const color = d3.scaleSequential(t => {
+    const depth = dDomMin + t * (dDomMax - dDomMin);
+    return depthRamp(depthWarp(depth));
+  })
+  .domain([dDomMin, dDomMax])
+  .clamp(true);
+
+  // Magnitude size: bigger top end + more separation
+  const sizeScale = d3.scaleSqrt().domain(magExt).range([3.5, 24]);
+
+  // Larger quakes pop more through clusters
+  const alphaScale = d3.scaleLinear().domain(magExt).range([0.55, 0.98]).clamp(true);
+
+  // On-screen radius guard so small events don’t vanish, big ones don’t overwhelm
+  let currK = 1;            // updated by zoom handler
+  const MIN_SCREEN_R = 3.2; // px
+  const MAX_SCREEN_R = 26;  // px
 
   const dataRadius = (mag, k = currK) => {
     const r = sizeScale(mag ?? magExt[0]);
     const ksafe = Math.max(1e-6, k);
-    // Convert desired screen-space clamp to data-space radius by dividing by k
     return Math.min(Math.max(r, MIN_SCREEN_R / ksafe), MAX_SCREEN_R / ksafe);
   };
+
 
 
   window.addEventListener("resize", ()=>{
@@ -817,51 +841,96 @@ const normId = v => String(v).padStart(2, "0");
   document.getElementById("clearLoc").onclick = ()=>{ selectedLocs.clear(); renderChips(); render(); };
 
   /* ---------- Legend ---------- */
-  function drawLegend(){
-    legendG.selectAll("*").remove();
-    const pad = 10;
-    const cardW = Math.min(260, Math.max(220, width * 0.22));
-    const depthBarH = 12;
+    function drawLegend(){
+      legendG.selectAll("*").remove();
+      const pad = 10;
+      const cardW = Math.min(260, Math.max(220, width * 0.22));
+      const depthBarH = 12;
 
-    const mags = safeExtent(points.map(d=>d.mag).filter(v=>v!=null && isFinite(v)), [4.5,9.5]);
-    const sScale = d3.scaleSqrt().domain(mags).range([3, 9]);
-    const maxR = sScale(mags[1]);
+      // magnitude legend needs this
+      const mags = safeExtent(points.map(d=>d.mag).filter(v=>v!=null && isFinite(v)), [4.5,9.5]);
+      const sScale = sizeScale.copy().domain(mags);
+      const maxR = sScale(mags[1]);
 
-    const cardH = 26 + depthBarH + 12 + 16 + 8 + 26 + maxR + 12 + 8;
-    const x0 = width - cardW - 12;
-    const y0 = height - cardH - 12;
+      const cardH = 26 + depthBarH + 12 + 16 + 8 + 26 + maxR + 12 + 8;
+      const x0 = width - cardW - 12;
+      const y0 = height - cardH - 12;
 
-    legendG.append("rect").attr("class","legend-card").attr("x",x0).attr("y",y0).attr("width",cardW).attr("height",cardH);
-    legendG.append("text").attr("class","legend-title").attr("x",x0+pad).attr("y",y0+18).text("Depth (km)");
+      legendG.append("rect")
+        .attr("class","legend-card")
+        .attr("x",x0).attr("y",y0).attr("width",cardW).attr("height",cardH);
 
-    const barW = cardW - pad*2;
-    const gradId = "depthGrad";
-    const defs = legendG.append("defs");
-    const grad = defs.append("linearGradient").attr("id",gradId).attr("x1","0%").attr("x2","100%").attr("y1","0%").attr("y2","0%");
-    const [d0,d1] = color.domain();
-    for (let i=0;i<=12;i++){ const t=i/12, val=d0+t*(d1-d0); grad.append("stop").attr("offset",`${t*100}%`).attr("stop-color", color(val)); }
-    legendG.append("rect").attr("x",x0+pad).attr("y",y0+26).attr("width",barW).attr("height",depthBarH).attr("rx",6).attr("ry",6).attr("fill",`url(#${gradId})`).attr("stroke","#243142");
+      // --- Depth bar ---
+      legendG.append("text")
+        .attr("class","legend-title")
+        .attr("x",x0+pad).attr("y",y0+18)
+        .text("Depth (km)");
 
-    const tickY = y0 + 26 + depthBarH + 12;
-    [d0, Math.round((d0+d1)/2), d1].forEach((t,i)=>{
-      const tx = x0 + pad + (barW * i/2);
-      legendG.append("text").attr("x",tx).attr("y",tickY).attr("text-anchor", i===0?'start':i===2?'end':'middle').attr("fill", getComputedStyle(document.documentElement).getPropertyValue('--muted')||'#9fb0c6').attr("font-size",11).text(t);
-    });
+      const barW = cardW - pad*2;
+      const gradId = "depthGrad";
+      const defs = legendG.append("defs");
+      const grad = defs.append("linearGradient")
+        .attr("id",gradId).attr("x1","0%").attr("x2","100%").attr("y1","0%").attr("y2","0%");
 
-    const magVals = [mags[0], (mags[0]+mags[1])/2, mags[1]].map(v=>+v.toFixed(1));
-    const cxLeft  = x0 + pad + maxR + 4;
-    const cxRight = x0 + cardW - pad - maxR - 4;
-    const gap = (cxRight - cxLeft) / (magVals.length - 1);
-    const circlesY = tickY + 8 + 16 + 10 + 16;
+      const [d0,d1] = color.domain();
 
-    legendG.append("text").attr("class","legend-title").attr("x",x0+pad).attr("y",tickY+8+16).text("Magnitude");
+      // Sample the warped color along the *data* domain to draw a smooth bar
+      for (let i=0;i<=48;i++){
+        const v = d0 + (i/48)*(d1-d0);
+        const off = (v - d0)/(d1 - d0);
+        grad.append("stop").attr("offset",`${off*100}%`).attr("stop-color", color(v));
+      }
 
-    magVals.forEach((m,i)=>{
-      const cx = cxLeft + i*gap, r = sScale(m);
-      legendG.append("circle").attr("cx",cx).attr("cy",circlesY).attr("r",r).attr("fill","#e6e6e6").attr("fill-opacity",.9).attr("stroke","#000").attr("stroke-opacity",.4);
-      legendG.append("text").attr("x",cx).attr("y",circlesY + r + 12).attr("text-anchor","middle").attr("fill", getComputedStyle(document.documentElement).getPropertyValue('--muted')||'#9fb0c6').attr("font-size",11).text(m);
-    });
-  }
+      legendG.append("rect")
+        .attr("x",x0+pad).attr("y",y0+26)
+        .attr("width",barW).attr("height",depthBarH)
+        .attr("rx",6).attr("ry",6)
+        .attr("fill",`url(#${gradId})`)
+        .attr("stroke","#243142");
+
+      // Ticks at interpretable breaks
+      const breaksAll = [0,15,35,70,120,200,275];
+      const breaks = breaksAll.filter(v => v>=d0 && v<=d1);
+      const tickY = y0 + 26 + depthBarH + 12;
+      const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted') || '#6b7280';
+
+      breaks.forEach(v=>{
+        const t = (v - d0)/(d1 - d0);
+        const tx = x0 + pad + barW*t;
+        legendG.append("line")
+          .attr("x1",tx).attr("x2",tx)
+          .attr("y1",y0+26+depthBarH).attr("y2",y0+26+depthBarH+6)
+          .attr("stroke", "#8ea0b5");
+        legendG.append("text")
+          .attr("x",tx).attr("y",tickY).attr("text-anchor","middle")
+          .attr("fill", muted).attr("font-size",11)
+          .text(v);
+      });
+
+      // --- Magnitude (uses your actual size scale) ---
+      legendG.append("text")
+        .attr("class","legend-title")
+        .attr("x",x0+pad).attr("y",tickY+8+16)
+        .text("Magnitude");
+
+      const magVals = [mags[0], (mags[0]+mags[1])/2, mags[1]].map(v=>+v.toFixed(1));
+      const cxLeft  = x0 + pad + maxR + 4;
+      const cxRight = x0 + cardW - pad - maxR - 4;
+      const gap = (cxRight - cxLeft) / (magVals.length - 1);
+      const circlesY = tickY + 8 + 16 + 10 + 16;
+
+      magVals.forEach((m,i)=>{
+        const cx = cxLeft + i*gap, r = sScale(m);
+        legendG.append("circle")
+          .attr("cx",cx).attr("cy",circlesY).attr("r",r)
+          .attr("fill","#e6e6e6").attr("fill-opacity",.9)
+          .attr("stroke","#000").attr("stroke-opacity",.4);
+        legendG.append("text")
+          .attr("x",cx).attr("y",circlesY + r + 12)
+          .attr("text-anchor","middle").attr("fill", muted).attr("font-size",11)
+          .text(m);
+      });
+    }
 
   /* ---------- Render ---------- */
   function render(){
