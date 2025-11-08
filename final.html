@@ -10,193 +10,199 @@
 
 
 <style>
-/* LIGHT THEME (default) */
-:root{
-  --bg:#ffffff;               /* page background */
-  --text:#111827;             /* primary text */
-  --muted:#6b7280;            /* secondary text */
-  --grid:#e5e7eb;             /* borders/dividers */
-  --accent:#2563eb;           /* blue accent */
-  --panel:#ffffff;            /* cards/inputs/sidebar */
-}
 
-/* DARK THEME (optional toggle) */
-:root[data-theme="dark"]{
-  --bg:#0b0e14;
-  --text:#e8eef7;
-  --muted:#9fb0c6;
-  --grid:#243142;
-  --accent:#1f62d6;
-  --panel:#0f141c;
-}
+    /* LIGHT THEME (default) */
+    :root{
+      --bg:#ffffff;               /* page background */
+      --text:#111827;             /* primary text */
+      --muted:#6b7280;            /* secondary text */
+      --grid:#e5e7eb;             /* borders/dividers */
+      --accent:#2563eb;           /* blue accent */
+      --panel:#ffffff;            /* cards/inputs/sidebar */
+    }
 
-/* Base */
-*{ box-sizing:border-box }
-html,body{ height:100% }
-body{
-  margin:0; background:var(--bg); color:var(--text);
-  font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  overflow:hidden;
-}
+    /* DARK THEME (optional toggle) */
+    :root[data-theme="dark"]{
+      --bg:#0b0e14;
+      --text:#e8eef7;
+      --muted:#9fb0c6;
+      --grid:#243142;
+      --accent:#1f62d6;
+      --panel:#0f141c;
+    }
 
-/* Header */
-header{
-  height:52px; display:flex; align-items:center; gap:10px;
-  padding:0 12px; border-bottom:1px solid var(--grid);
-  white-space:nowrap; overflow:hidden; background:var(--panel);
-}
-header h1{ font-size:16px; margin:0; font-weight:600; color:var(--text); }
-header .sub{ color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis }
+    /* Base */
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      overflow:hidden;
+    }
 
-/* Layout */
-.layout{
-  position:absolute; inset:52px 0 0 0;
-  display:grid; grid-template-columns:340px 1fr; min-height:0;
-}
-@media (max-width:900px){ .layout{ grid-template-columns:280px 1fr; } }
+    /* Header */
+    header{
+      height:52px; display:flex; align-items:center; gap:10px;
+      padding:0 12px; border-bottom:1px solid var(--grid);
+      white-space:nowrap; overflow:hidden; background:var(--panel);
+    }
+    header h1{ font-size:16px; margin:0; font-weight:600; color:var(--text); }
+    header .sub{ color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis }
 
-/* Sidebar + controls */
-.sidebar{
-  border-right:1px solid var(--grid);
-  background:var(--panel);
-  padding:16px 14px; overflow:auto;
-}
-.filters{ display:grid; gap:16px; min-width:0 }
-.section{
-  display:grid; gap:8px; padding-bottom:10px;
-  border-bottom:1px dashed var(--grid);
-}
-.section:last-child{ border-bottom:none }
+    /* Layout */
+    .layout{
+      position:absolute; inset:52px 0 0 0;
+      display:grid; grid-template-columns:340px 1fr; min-height:0;
+    }
+    @media (max-width:900px){ .layout{ grid-template-columns:280px 1fr; } }
 
-.row{ display:grid; grid-template-columns:90px 1fr; gap:4px; align-items:center }
-.label{ color:var(--text); font-size:14px; font-weight:500 }
-.valuespan{ color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
+    /* Sidebar + controls */
+    .sidebar{
+      border-right:1px solid var(--grid);
+      background:var(--panel);
+      padding:16px 14px; overflow:auto;
+    }
+    .filters{ display:grid; gap:16px; min-width:0 }
+    .section{
+      display:grid; gap:8px; padding-bottom:10px;
+      border-bottom:1px dashed var(--grid);
+    }
+    .section:last-child{ border-bottom:none }
 
-.slider2{ position:relative; height:26px; display:flex; align-items:center; grid-column:1 / span 2 }
-.slider2 input[type="range"]{
-  -webkit-appearance:none; appearance:none; position:absolute; width:100%;
-  background:none; pointer-events:none;
-}
-.slider2 input[type="range"]::-webkit-slider-runnable-track{
-  height:5px; border-radius:999px; background:#e7efff;
-}
-.slider2 input[type="range"]::-moz-range-track{
-  height:5px; border-radius:999px; background:#e7efff;
-}
-.slider2 input[type="range"]::-webkit-slider-thumb{
-  -webkit-appearance:none; appearance:none;
-  width:12px; height:12px; border-radius:50%;
-  background:#fff; border:2px solid var(--accent); margin-top:-4px; pointer-events:auto;
-}
-.slider2 input[type="range"]::-moz-range-thumb{
-  width:12px; height:12px; border-radius:50%;
-  background:#fff; border:2px solid var(--accent); pointer-events:auto;
-}
-.slider2 input.lower{ z-index:1 } .slider2 input.upper{ z-index:2 }
+    .row{ display:grid; grid-template-columns:90px 1fr; gap:4px; align-items:center }
+    .label{ color:var(--text); font-size:14px; font-weight:500 }
+    .valuespan{ color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
 
-.row.values{ grid-template-columns:1fr }
-.row.values .label{ display:none }
-.valuebox{
-  display:grid; grid-template-columns:auto 65px 1fr auto 65px;
-  align-items:center; gap:4px; color:var(--muted); font-size:11.5px;
-}
+    .slider2{ position:relative; height:26px; display:flex; align-items:center; grid-column:1 / span 2 }
+    .slider2 input[type="range"]{
+      -webkit-appearance:none; appearance:none; position:absolute; width:100%;
+      background:none; pointer-events:none;
+    }
+    .slider2 input[type="range"]::-webkit-slider-runnable-track{
+      height:5px; border-radius:999px; background:#e7efff;
+    }
+    .slider2 input[type="range"]::-moz-range-track{
+      height:5px; border-radius:999px; background:#e7efff;
+    }
+    .slider2 input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none; appearance:none;
+      width:12px; height:12px; border-radius:50%;
+      background:#fff; border:2px solid var(--accent); margin-top:-4px; pointer-events:auto;
+    }
+    .slider2 input[type="range"]::-moz-range-thumb{
+      width:12px; height:12px; border-radius:50%;
+      background:#fff; border:2px solid var(--accent); pointer-events:auto;
+    }
+    .slider2 input.lower{ z-index:1 } .slider2 input.upper{ z-index:2 }
 
-input[type="number"]{
-  background:var(--panel); color:var(--text);
-  border:1px solid var(--grid); border-radius:6px;
-  padding:3px 6px; width:60px; margin-left:5px; text-align:center;
-}
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+    .row.values{ grid-template-columns:1fr }
+    .row.values .label{ display:none }
+    .valuebox{
+      display:grid; grid-template-columns:auto 65px 1fr auto 65px;
+      align-items:center; gap:4px; color:var(--muted); font-size:11.5px;
+    }
 
-.checkboxrow{ margin-left:4px }
-.checkboxrow label{ display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11.5px; margin:0 }
+    input[type="number"]{
+      background:var(--panel); color:var(--text);
+      border:1px solid var(--grid); border-radius:6px;
+      padding:3px 6px; width:60px; margin-left:5px; text-align:center;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
 
-/* Location search */
-.locbox{ position:relative; display:grid; gap:8px }
-.locbox input[type="text"]{
-  width:100%; padding:6px 8px; border-radius:6px;
-  border:1px solid var(--grid); background:var(--panel); color:var(--text); min-width:0;
-}
-.helper{ color:var(--muted); font-size:11px }
+    .checkboxrow{ margin-left:4px }
+    .checkboxrow label{ display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11.5px; margin:0 }
 
-.chips{ display:flex; flex-wrap:wrap; gap:6px }
-.chip{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:4px 8px; border-radius:999px;
-  background:#eef2ff; border:1px solid #c7d2fe; color:var(--text);
-  font-size:12px;
-}
-.chip .x{ cursor:pointer; opacity:.7; font-weight:700 }
-.chip .x:hover{ opacity:1 }
+    /* Location search */
+    .locbox{ position:relative; display:grid; gap:8px }
+    .locbox input[type="text"]{
+      width:100%; padding:6px 8px; border-radius:6px;
+      border:1px solid var(--grid); background:var(--panel); color:var(--text); min-width:0;
+    }
+    .helper{ color:var(--muted); font-size:11px }
 
-.loc-suggest{
-  position:absolute; left:0; right:0; top:calc(100% + 4px);
-  background:var(--panel); border:1px solid var(--grid); border-radius:8px;
-  box-shadow:0 8px 24px rgba(0,0,0,.12); max-height:240px; overflow-y:auto;
-  z-index:20; display:none;
-}
-.loc-item{ padding:6px 8px; font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer }
-.loc-item small{ color:var(--muted); font-size:11px; margin-left:6px }
-.loc-item:hover, .loc-item.active{ background:#f3f6fd }
+    .chips{ display:flex; flex-wrap:wrap; gap:6px }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      background:#eef2ff; border:1px solid #c7d2fe; color:var(--text);
+      font-size:12px;
+    }
+    .chip .x{ cursor:pointer; opacity:.7; font-weight:700 }
+    .chip .x:hover{ opacity:1 }
 
-/* Map area */
-.view{ position:relative; min-height:0 }
-svg{ width:100%; height:100%; display:block }
+    .loc-suggest{
+      position:absolute; left:0; right:0; top:calc(100% + 4px);
+      background:var(--panel); border:1px solid var(--grid); border-radius:8px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12); max-height:240px; overflow-y:auto;
+      z-index:20; display:none;
+    }
+    .loc-item{ padding:6px 8px; font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer }
+    .loc-item small{ color:var(--muted); font-size:11px; margin-left:6px }
+    .loc-item:hover, .loc-item.active{ background:#f3f6fd }
 
-/* States + borders */
-.states{ fill:#f7fafc; stroke:#cbd5e1; stroke-width:.6 }
-.state-borders{ fill:none; stroke:#cbd5e1; stroke-width:.6; pointer-events:none }
+    /* Map area */
+    .view{ position:relative; min-height:0 }
+    svg{ width:100%; height:100%; display:block }
 
-/* Quake dots */
-.quake{ stroke:#000; stroke-opacity:.25 }
-.nodata{ fill:#9aa0a6 !important; opacity:.9 }
+    /* States + borders */
+    .states{ fill:#f7fafc; stroke:#cbd5e1; stroke-width:.6 }
+    .state-borders{ fill:none; stroke:#cbd5e1; stroke-width:.6; pointer-events:none }
 
-/* Legend */
-.legend-card{
-  fill:rgba(255,255,255,.96);
-  stroke:var(--grid); stroke-width:1;
-  filter:drop-shadow(0 8px 16px rgba(0,0,0,.10));
-  rx:10; ry:10;
-}
-.legend-title{ fill:var(--text); font-weight:600; font-size:12px }
+    /* Quake dots */
+    .quake{ stroke:#000; stroke-opacity:.25 }
+    .nodata{ fill:#9aa0a6 !important; opacity:.9 }
 
-/* Tooltip */
-.tooltip{
-  position:absolute; pointer-events:none; opacity:0;
-  background:#ffffff; color:var(--text); border:1px solid var(--grid);
-  padding:8px 10px; font-size:12px; border-radius:8px;
-  box-shadow:0 8px 24px rgba(0,0,0,.12);
-  transform:translate(-50%,-120%);
-}
+    /* Legend */
+    .legend-card{
+      fill:rgba(255,255,255,.96);
+      stroke:var(--grid); stroke-width:1;
+      filter:drop-shadow(0 8px 16px rgba(0,0,0,.10));
+      rx:10; ry:10;
+    }
+    .legend-title{ fill:var(--text); font-weight:600; font-size:12px }
 
-/* Buttons */
-#resetBtn{
-  width:100%; padding:8px 0;
-  background-color:#f3f8ff; color:#1f2937;
-  font-size:13px; font-weight:600;
-  border:1px solid var(--grid); border-radius:6px;
-  cursor:pointer; transition:all .2s ease-in-out;
-}
-#resetBtn:hover{ background-color:#e6f0ff }
-#resetBtn:active{ transform:scale(0.97) }
+    /* Tooltip */
+    .tooltip{
+      position:absolute; pointer-events:none; opacity:0;
+      background:#ffffff; color:var(--text); border:1px solid var(--grid);
+      padding:8px 10px; font-size:12px; border-radius:8px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
+      transform:translate(-50%,-120%);
+    }
 
-#clearLoc{
-  background:var(--panel); color:var(--text);
-  border:1px solid var(--grid); border-radius:6px;
-  padding:4px 8px; cursor:pointer;
-}
-#clearLoc:hover{ background:#f3f6fd }
+    /* Buttons */
+    #resetBtn{
+      width:100%; padding:8px 0;
+      background-color:#f3f8ff; color:#1f2937;
+      font-size:13px; font-weight:600;
+      border:1px solid var(--grid); border-radius:6px;
+      cursor:pointer; transition:all .2s ease-in-out;
+    }
+    #resetBtn:hover{ background-color:#e6f0ff }
+    #resetBtn:active{ transform:scale(0.97) }
 
-/* Insets */
-.inset{ fill:none; stroke:#94a3b8; stroke-width:1; shape-rendering:crispEdges }
-.inset-label{ fill:var(--muted); font-size:11px; pointer-events:none }
-.insetBox{ fill:none; stroke:#94a3b8; stroke-width:1; stroke-dasharray:4 3; shape-rendering:crispEdges }
-.insetTitle{ fill:var(--muted); font-size:12px; font-weight:600 }
-.nonScaleStroke{ vector-effect:non-scaling-stroke }
+    #clearLoc{
+      background:var(--panel); color:var(--text);
+      border:1px solid var(--grid); border-radius:6px;
+      padding:4px 8px; cursor:pointer;
+    }
+    #clearLoc:hover{ background:#f3f6fd }
 
-/* Misc */
-.main-map-mask path{ stroke-width:2 } /* if you ever bring masks back */
+    /* Insets */
+    .inset{ fill:none; stroke:#94a3b8; stroke-width:1; shape-rendering:crispEdges }
+    .inset-label{ fill:var(--muted); font-size:11px; pointer-events:none }
+    .insetBox{ fill:none; stroke:#94a3b8; stroke-width:1; stroke-dasharray:4 3; shape-rendering:crispEdges }
+    .insetTitle{ fill:var(--muted); font-size:12px; font-weight:600 }
+    .nonScaleStroke{ vector-effect:non-scaling-stroke }
+
+    /* Misc */
+    .main-map-mask path{ stroke-width:2 } /* if you ever bring masks back */
+
+    /* Performance hints */
+    #svg, #svg g { will-change: transform; }
+    .quake { shape-rendering: geometricPrecision; }
+
 </style>
 
 
@@ -294,6 +300,16 @@ const normId = v => String(v).padStart(2, "0");
     if (e[0]===e[1]) return [e[0], e[0]+(typeof e[0]==="number"?1:1)];
     return e;
   };
+
+  let _raf = 0;
+  function requestRepaint(){
+    if (_raf) return;
+    _raf = requestAnimationFrame(() => {
+      _raf = 0;
+      render();
+      drawInsetsTopRow();
+    });
+  }
 
   /* ---------- State maps ---------- */
   const STATE_ABBR_TO_FULL = {
@@ -397,25 +413,35 @@ const normId = v => String(v).padStart(2, "0");
 
     // mark points that belong to AK/HI/PR inset regions (by screen box OR on-land)
     function recomputeInsetMembership(){
-      points.forEach(d=>{
-        const proj = projection([d.lon, d.lat]);
-        let inRect = false;
-        if (proj){
-          const [x,y] = proj;
-          for (const ab of ["AK","HI","PR"]){
-            const r = insetRects[ab]; if(!r) continue;
-            if (x>=r[0][0] && x<=r[1][0] && y>=r[0][1] && y<=r[1][1]) { inRect = true; break; }
+      const order = ["AK","HI","PR"];
+
+      points.forEach((d,i)=>{
+        // cache projected coords (used by main map and insets)
+        const p = projection([d.lon, d.lat]);
+        d._px = p ? p[0] : null;
+        d._py = p ? p[1] : null;
+
+        // decide which inset, using fast screen-rect test then (rare) geoContains fallback
+        let code = null;
+        if (p){
+          for (const ab of order){
+            const r = insetRects[ab]; if (!r) continue;
+            if (d._px>=r[0][0] && d._px<=r[1][0] && d._py>=r[0][1] && d._py<=r[1][1]) { code = ab; break; }
           }
         }
-        // on-land is also considered inset (rarely needed but safe)
-        const onLand = ["AK","HI","PR"].some(ab=>{
-          const f = findStateByFIPS(FIPS[ab]); return f && d3.geoContains(f, [d.lon, d.lat]);
-        });
-        d._inInset = inRect || onLand;
+        if (!code){
+          for (const ab of order){
+            const f = findStateByFIPS(FIPS[ab]);
+            if (f && d3.geoContains(f, [d.lon, d.lat])) { code = ab; break; }
+          }
+        }
+        d._insetCode = code;       // 'AK' | 'HI' | 'PR' | null
+        d._inInset    = !!code;    // keep your existing flag for backward-compat
+
+        if (!d._key) d._key = `${d.time||""}|${d.lat}|${d.lon}|${i}`; // stable key once
       });
-      // (optional) debug:
-      console.log("Inset points flagged:", points.filter(p=>p._inInset).length);
     }
+
 
 
     // IDs we want in the top-row insets only
@@ -586,15 +612,12 @@ const normId = v => String(v).padStart(2, "0");
           .attr("d", path);
 
         // 4) Quakes within that state/territory (geoContains = robust)
-        const pts = points.filter(d => passesFilters(d) && d3.geoContains(f, [d.lon, d.lat]));
+        const pts = points.filter(d => passesFilters(d) && d._insetCode === ab);
         g.selectAll("circle").data(pts).join("circle")
           .attr("class", "quake nonScaleStroke")
           // divide by 's' so circles keep the same *screen* size despite the group scale
           .attr("r", d => dataRadius(d.mag, 1) / s)   // insets don't zoom with the main layer
-          .attr("transform", d => {
-            const p = projection([d.lon, d.lat]);
-            return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
-          })
+          .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
           .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
           .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
           .on("mousemove", (event, d) => {
@@ -720,9 +743,9 @@ const normId = v => String(v).padStart(2, "0");
     hiN.onchange=()=>sync(+loN.value,+hiN.value);
     sync(domain[0],domain[1],false); onChange([domain[0],domain[1]]);
   }
-  initDual({ domain:magExt, step:0.1, ids:{lowerRange:'magMinR',upperRange:'magMaxR',lowerNum:'magMinN',upperNum:'magMaxN'}, labelElId:'magVals', onChange:r=>{ magRange=r; render(); drawInsetsTopRow(); }});
-  initDual({ domain:[dDomMin,dDomMax], step:10, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; render(); drawInsetsTopRow(); }});
-  initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; render(); drawInsetsTopRow(); }});
+  initDual({ domain:magExt, step:0.1, ids:{lowerRange:'magMinR',upperRange:'magMaxR',lowerNum:'magMinN',upperNum:'magMaxN'}, labelElId:'magVals', onChange:r=>{ magRange=r; requestRepaint(); }});
+  initDual({ domain:[dDomMin,dDomMax], step:10, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; requestRepaint(); }});
+  initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; requestRepaint(); }});
 
   /* ---------- Location: suggestions + chips ---------- */
   const locInput = document.getElementById("locInput");
@@ -751,7 +774,7 @@ const normId = v => String(v).padStart(2, "0");
       const span = document.createElement("span");
       span.className = "chip";
       span.innerHTML = `${label} <span class="x" title="Remove">×</span>`;
-      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); render(); drawInsetsTopRow(); };
+      span.querySelector(".x").onclick = ()=>{ selectedLocs.delete(label); renderChips(); requestRepaint(); };
       chipsBox.appendChild(span);
     }
   }
@@ -759,8 +782,7 @@ const normId = v => String(v).padStart(2, "0");
       if (!label) return;
       selectedLocs.add(label);
       renderChips();
-      render();
-      drawInsetsTopRow();
+      requestRepaint();
   }
 
 
@@ -837,11 +859,11 @@ const normId = v => String(v).padStart(2, "0");
       }
       locInput.value = ""; closePanel();
     } else if (e.key === "Backspace" && !locInput.value){
-      const last = Array.from(selectedLocs).pop(); if (last){ selectedLocs.delete(last); renderChips(); render(); }
+      const last = Array.from(selectedLocs).pop(); if (last){ selectedLocs.delete(last); renderChips(); requestRepaint(); }
     } else if (e.key === "Escape"){ closePanel(); }
   });
   document.addEventListener("click", (e)=>{ if (!document.querySelector(".locbox").contains(e.target)) closePanel(); });
-  document.getElementById("clearLoc").onclick = ()=>{ selectedLocs.clear(); renderChips(); render(); drawInsetsTopRow(); };
+  document.getElementById("clearLoc").onclick = ()=>{ selectedLocs.clear(); renderChips(); requestRepaint(); };
 
   /* ---------- Legend ---------- */
     function drawLegend(){
@@ -956,17 +978,15 @@ const normId = v => String(v).padStart(2, "0");
     try{
       const allowNA = document.getElementById("includeNA").checked;
 
-      const filtered = points.filter(d => passesFilters(d) && !d._inInset);
+      const filtered = points.filter(d => passesFilters(d) && !d._insetCode);
 
-const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+"|"+i);
+      const sel = ptsG.selectAll("circle.quake").data(filtered, d => d._key);
 
 
       sel.enter().append("circle")
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
         .attr("r", d => dataRadius(d.mag))
-        .attr("transform", d => {
-          const p = projection([d.lon, d.lat]); return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
-        })
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
         .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
         .on("mousemove", (event, d) => {
@@ -1029,8 +1049,7 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
       if (typeof renderChips === "function") renderChips();
     }
 
-    render();
-    drawInsetsTopRow();
+    requestRepaint();
   });
 
 
@@ -1046,7 +1065,7 @@ const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+
     if (e.target === svg.node()) svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
   });
 
-  document.getElementById("includeNA").addEventListener("change", ()=>{ render(); drawInsetsTopRow(); });
+  document.getElementById("includeNA").addEventListener("change", requestRepaint);
 })();
 </script>
 </body>
