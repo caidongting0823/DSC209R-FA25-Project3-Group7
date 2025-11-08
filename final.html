@@ -172,6 +172,9 @@
 </div>
 
 <script>
+
+const normId = v => String(v).padStart(2, "0");
+
 (async function () {
   /* ---------- Small helpers ---------- */
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -241,8 +244,6 @@
   }
   let { width, height } = sizeSVG();
   let insetBandH = 0; // dynamic height for the top inset strip
-  window.addEventListener("resize", ()=>{ ({width,height}=sizeSVG()); updateProjection(); drawLegend();
-      render(); drawInsetsTopRow();});
 
   let projection = d3.geoAlbersUsaTerritories();
   let path = d3.geoPath(projection);
@@ -256,6 +257,9 @@
     path = d3.geoPath(projection);
 
     mapG.selectAll("path").attr("d", path);
+
+    computeInsetRects();
+    recomputeInsetMembership();
   }
 
 
@@ -263,6 +267,47 @@
 
     const allStatesFC   = topojson.feature(us, us.objects.states);
     const stateFeatures = allStatesFC.features;
+
+    const findStateByFIPS = (fips) => stateFeatures.find(s => normId(s.id) === fips);
+
+    // Which states go in the top insets
+    const FIPS = { AK: "02", HI: "15", PR: "72" };
+
+    // Padded screen boxes for inset classification (in pixels)
+    const PAD = { AK: 60, HI: 30, PR: 35 };
+    let insetRects = {}; // { AK:[ [x0,y0],[x1,y1] ], ... }
+
+    function computeInsetRects(){
+      ["AK","HI","PR"].forEach(ab=>{
+        const f = findStateByFIPS(FIPS[ab]); if(!f) return;
+        const b = path.bounds(f);                    // screen-space bounds of land
+        const p = PAD[ab] || 20;
+        insetRects[ab] = [[b[0][0]-p, b[0][1]-p], [b[1][0]+p, b[1][1]+p]];
+      });
+    }
+
+    // mark points that belong to AK/HI/PR inset regions (by screen box OR on-land)
+    function recomputeInsetMembership(){
+      points.forEach(d=>{
+        const proj = projection([d.lon, d.lat]);
+        let inRect = false;
+        if (proj){
+          const [x,y] = proj;
+          for (const ab of ["AK","HI","PR"]){
+            const r = insetRects[ab]; if(!r) continue;
+            if (x>=r[0][0] && x<=r[1][0] && y>=r[0][1] && y<=r[1][1]) { inRect = true; break; }
+          }
+        }
+        // on-land is also considered inset (rarely needed but safe)
+        const onLand = ["AK","HI","PR"].some(ab=>{
+          const f = findStateByFIPS(FIPS[ab]); return f && d3.geoContains(f, [d.lon, d.lat]);
+        });
+        d._inInset = inRect || onLand;
+      });
+      // (optional) debug:
+      console.log("Inset points flagged:", points.filter(p=>p._inInset).length);
+    }
+
 
     // IDs we want in the top-row insets only
     const excludedIds = new Set(["02","15","72"]); // AK, HI, PR
@@ -357,17 +402,21 @@
     d.locStFull= cs.stFull;
   });
 
-  // FIPS ids for states in us-atlas (AK=02, HI=15, PR=72)
-  // FIPS ids must be strings in us-atlas
-  const FIPS = { AK: "02", HI: "15", PR: "72" };
+  // // FIPS ids for states in us-atlas (AK=02, HI=15, PR=72)
+  // // FIPS ids must be strings in us-atlas
+  // const FIPS = { AK: "02", HI: "15", PR: "72" };
 
-  const insetFeatures = ["AK","HI","PR"]
-    .map(ab => stateFeatures.find(s => String(s.id) === FIPS[ab]))
-    .filter(Boolean);
+  // const insetFeatures = ["AK","HI","PR"]
+  //   .map(ab => findStateByFIPS(FIPS[ab]))
+  //   .filter(Boolean);
+  //
+  // console.log("Inset features:", insetFeatures.map(f => String(f.id).padStart(2,"0")));
+  // console.log("Inset points flagged:", points.filter(p => p._inInset).length);
 
-  points.forEach(d => {
-    d._inInset = insetFeatures.some(f => d3.geoContains(f, [d.lon, d.lat]));
-  });
+
+  // points.forEach(d => {
+  //   d._inInset = insetFeatures.some(f => d3.geoContains(f, [d.lon, d.lat]));
+  // });
 
 
   function zoomToBBox(b){
@@ -395,7 +444,7 @@
       const statesOrder = ["AK","HI","PR"];
 
       statesOrder.forEach((ab, i) => {
-        const f = stateFeatures.find(s => s.id === FIPS[ab]);
+        const f = findStateByFIPS(FIPS[ab]);
         if (!f) return;
 
         const rectX = xPos[i], rectY = marginY;
@@ -489,6 +538,14 @@
 
   const color = d3.scaleSequential([dDomMin, dDomMax], d3.interpolateTurbo);
   const sizeScale = d3.scaleSqrt().domain(magExt).range([1.8, 11]);
+
+  window.addEventListener("resize", ()=>{
+      ({width,height}=sizeSVG());
+      updateProjection();
+      drawLegend();
+      render();
+      drawInsetsTopRow();
+  });
 
   let magRange=[magExt[0],magExt[1]], depthRange=[dDomMin,dDomMax], yearRange=[yearExt[0],yearExt[1]];
   const selectedLocs = new Set(); // "City, ST" or "ST"
