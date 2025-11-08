@@ -88,6 +88,7 @@
   .insetTitle{ fill: var(--muted); font-size:12px; font-weight:600 }
   .nonScaleStroke{ vector-effect: non-scaling-stroke }
 
+  .main-map-mask path { stroke-width: 2; }
 
 </style>
 </head>
@@ -253,16 +254,54 @@
                  .translate([width/2, insetBandH + mapH/2]) // center in lower band
                  .scale(Math.max(300, Math.min(width, mapH) * 1.8));
     path = d3.geoPath(projection);
+
     mapG.selectAll("path").attr("d", path);
   }
 
 
-  const us = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(r=>r.json());
-  const states = topojson.feature(us, us.objects.states);
-  const borders = topojson.mesh(us, us.objects.states, (a,b)=>a!==b);
-  const stateFeatures = topojson.feature(us, us.objects.states).features;
-  mapG.append("path").datum(states).attr("class","states").attr("d", path);
-  mapG.append("path").datum(borders).attr("class","state-borders").attr("d", path);
+    const us = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(r=>r.json());
+
+    const allStatesFC   = topojson.feature(us, us.objects.states);
+    const stateFeatures = allStatesFC.features;
+
+    // IDs we want in the top-row insets only
+    const excludedIds = new Set(["02","15","72"]); // AK, HI, PR
+    const id2 = s => String(s.id).padStart(2,"0");
+
+    // CONUS only features (remove AK/HI/PR)
+    const conusFeatures = stateFeatures.filter(f => !excludedIds.has(id2(f)));
+
+    // Borders only for CONUS
+    const conusBorders = topojson.mesh(
+      us, us.objects.states,
+      (a,b) => a !== b && !excludedIds.has(id2(a)) && !excludedIds.has(id2(b))
+    );
+
+    // Draw CONUS states (as individual paths) + borders
+    mapG.selectAll("path.state")
+      .data(conusFeatures)
+      .join("path")
+      .attr("class","states")
+      .attr("d", path);
+
+    mapG.selectAll("path.state-borders")
+      .data([conusBorders])
+      .join("path")
+      .attr("class","state-borders")
+      .attr("d", path);
+
+  // function maskInsetStates(){
+  //   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#0b0e14';
+  //   const toMask = stateFeatures.filter(s => excludedIds.has(String(s.id)));
+  //   const sel = maskG.selectAll("path").data(toMask, d => d.id);
+  //   sel.enter().append("path")
+  //       .merge(sel)
+  //       .attr("d", path)
+  //       .attr("fill", bg)
+  //       .attr("stroke", bg);
+  //   sel.exit().remove();
+  // }
+
 
   /* ---------- Data ---------- */
   const data = await d3.csv("data/us_earthquakes_m4.5_cleaned.csv", d=>{
@@ -321,6 +360,15 @@
   // FIPS ids for states in us-atlas (AK=02, HI=15, PR=72)
   // FIPS ids must be strings in us-atlas
   const FIPS = { AK: "02", HI: "15", PR: "72" };
+
+  const insetFeatures = ["AK","HI","PR"]
+    .map(ab => stateFeatures.find(s => String(s.id) === FIPS[ab]))
+    .filter(Boolean);
+
+  points.forEach(d => {
+    d._inInset = insetFeatures.some(f => d3.geoContains(f, [d.lon, d.lat]));
+  });
+
 
   function zoomToBBox(b){
     const [[x0,y0],[x1,y1]] = b;
@@ -634,22 +682,23 @@
     try{
       const allowNA = document.getElementById("includeNA").checked;
 
-      const filtered = points.filter(d=>{
+      const filtered = points.filter(d => {
         const magOK   = (d.mag  != null && d.mag  >= magRange[0]   && d.mag  <= magRange[1]);
         const yearOK  = (d.year != null && d.year >= yearRange[0]  && d.year <= yearRange[1]);
-        const depthOK = d.depth == null ? allowNA : (d.depth >= depthRange[0] && d.depth <= depthRange[1]);
+        const depthOK = d.depth == null ? document.getElementById("includeNA").checked
+                                  : (d.depth >= depthRange[0] && d.depth <= depthRange[1]);
 
         let locOK = true;
         if (selectedLocs.size > 0){
           const st  = (d.locStAbbr||"").toUpperCase();
           const lbl = (d.locLabel||"");
-          locOK = (st && selectedLocs.has(st)) || (lbl && selectedLocs.has(lbl));
+        locOK = (st && selectedLocs.has(st)) || (lbl && selectedLocs.has(lbl));
         }
-        return magOK && yearOK && depthOK && locOK;
+        return magOK && yearOK && depthOK && locOK && !d._inInset; // ← drop AK/HI/PR from main layer
       });
 
-      // Keep the base map visible regardless; only points are filtered
-      const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+ "|" + i);
+const sel = ptsG.selectAll("circle.quake").data(filtered, (d,i)=> (d.time||"t")+"|"+i);
+
 
       sel.enter().append("circle")
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
