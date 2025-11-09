@@ -19,6 +19,7 @@
       --grid:#e5e7eb;             /* borders/dividers */
       --accent:#2563eb;           /* blue accent */
       --panel:#ffffff;            /* cards/inputs/sidebar */
+      --headerH: 94px;
     }
 
     /* DARK THEME (optional toggle) */
@@ -42,16 +43,40 @@
 
     /* Header */
     header{
-      height:52px; display:flex; align-items:center; gap:10px;
-      padding:0 12px; border-bottom:1px solid var(--grid);
-      white-space:nowrap; overflow:hidden; background:var(--panel);
+      height: var(--headerH);
+      display:flex; align-items:flex-start; gap:14px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--grid);
+      background:var(--panel);
+      white-space:normal;           /* allow wrapping */
+      overflow:hidden;
     }
-    header h1{ font-size:16px; margin:0; font-weight:600; color:var(--text); }
-    header .sub{ color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis }
+    .hdr-left{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+    header h1{
+      margin:0;
+      font-size:22px;               /* bigger, punchier */
+      line-height:1.15;
+      font-weight:800;
+      letter-spacing:.2px;
+      color:var(--text);
+    }
+    header .subtitle{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.25;
+    }
+    header .byline{
+      color:var(--muted);
+      font-size:12px;
+    }
+    header .byline a{
+      color:inherit; text-decoration:none; border-bottom:1px dotted #cbd5e1;
+    }
+    header .byline a:hover{ color:var(--text); text-decoration:underline; }
 
     /* Layout */
     .layout{
-      position:absolute; inset:52px 0 0 0;
+      position:absolute; inset: var(--headerH) 0 0 0;
       display:grid; grid-template-columns:340px 1fr; min-height:0;
     }
     @media (max-width:900px){ .layout{ grid-template-columns:280px 1fr; } }
@@ -356,22 +381,33 @@
 
 </head>
 <body>
-<header>
-  <h1>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</h1>
-  <div class="sub">Interactive Map of 100 Years (1925 - 2025) of Seismic Activity Across America</div>
 
-  <div class="mode-tabs">
-    <button id="modeDiscover" class="tab active">Discover</button>
-    <button id="modeRolling"  class="tab">Rolling</button>
-    <button id="modeFull"     class="tab">Full Explore</button>
+<header>
+  <div class="hdr-left">
+    <h1>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</h1>
+    <div class="subtitle">Interactive Map of 100 Years (1925–2025) of Seismic Activity Across America</div>
+    <div class="byline">
+      <b>Group&nbsp;7 ·</b>
+      <a>Dongting&nbsp;Cai (docai@ucsd.edu)</a>,
+      <a>Chiu-Chiu (Jojo) Lin (jol145@ucsd.edu)</a>,
+      <a>Albab&nbsp;Newaz (anewaz@ucsd.edu) </a>
+    </div>
   </div>
 
 </header>
 
 <div class="layout">
   <aside class="sidebar">
-    <div class="filters">
 
+    <div class="mode-tabs">
+        <button id="modeDiscover" class="tab active">Discover Mode</button>
+        <button id="modeRolling"  class="tab">Rolling Player</button>
+        <button id="modeFull"     class="tab">Full Explore</button>
+    </div>
+
+    <hr />
+
+    <div class="filters">
       <div class="section">
         <div class="row"><div class="label">Magnitude</div><div class="valuespan" id="magVals">—</div></div>
         <div class="slider2 full-only">
