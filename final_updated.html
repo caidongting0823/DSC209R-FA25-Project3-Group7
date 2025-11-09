@@ -511,18 +511,17 @@ function setActiveTab(which){
 function setMode(m){
   if (m === mode) return;
   mode = m;
-  document.body.dataset.mode = (m === "full" ? "full" : m); // discover | rolling | full
+  document.body.dataset.mode = (m === "full" ? "full" : m);
   setActiveTab(m === "discover" ? "modeDiscover" : m === "rolling" ? "modeRolling" : "modeFull");
-  clearStory();              // leave any highlight
+  clearStory();
   hideCallout();
 
-
   if (m === "discover"){
-    applyStory("top10", { syncUI:false }); // default discover view
-    stopRolling();
+    resetRollingState();                          // ← NEW: fully leave rolling
+    applyStory("top10", { syncUI:false });        // default view for Discover
   } else if (m === "rolling"){
     initRollingUI();
-    stopRolling(); // start paused; user hits ▶
+    stopRolling();                                // start paused; user presses ▶
   } else if (m === "full"){
     stopRolling();
     requestRepaint();
@@ -631,6 +630,23 @@ function stopRolling(){
         rollTimer = null;
         document.getElementById("rollPlay").textContent = "▶";
     }
+}
+
+function resetRollingState(){
+  // stop timer + put UI back to a paused, hidden-feed baseline
+  stopRolling();
+  // reset the month pointer to the first month in the data (if known)
+  if (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) {
+    rollingMon = tsMonthExt[0];
+  }
+  // sync the slider + label + feed
+  const s = document.getElementById("rollSlider");
+  if (s && Number.isFinite(rollingMon)) s.value = rollingMon;
+  document.getElementById("rollReplay").style.display = "none";
+  updateRollLabel();
+  updateRollingFeed();  // this clears the list when not in rolling mode
+  // ask for a repaint so alpha logic re-computes with isRolling()===false
+  requestRepaint();
 }
 
 function replayRolling(){
