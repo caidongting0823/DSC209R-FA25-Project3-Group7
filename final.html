@@ -470,8 +470,8 @@ const normId = v => String(v).padStart(2, "0");
   function tooltipHTML(d){
     const useMw   = document.getElementById("useMw").checked;
     const mtShort = magTypeShort(d.magTypeOrig);   // show raw code nicely
-    const mOrig   = (d.mag!=null) ? `${d.mag.toFixed(1)} ${mtShort}` : "M?";
-    const mMw    = (d.magMw!=null) ? `${d.magMw.toFixed(1)} Mw` : null;
+    const mOrig   = (d.mag!=null) ? `${mtShort} ${d.mag.toFixed(1)}` : "M?";
+    const mMw     = (d.magMw!=null) ? `Mw ${d.magMw.toFixed(1)}` : null;
 
     // Title + asterisks
     let title = "", titleClass = "";
