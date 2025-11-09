@@ -19,6 +19,7 @@
       --grid:#e5e7eb;             /* borders/dividers */
       --accent:#2563eb;           /* blue accent */
       --panel:#ffffff;            /* cards/inputs/sidebar */
+      --headerH: 94px;
     }
 
     /* DARK THEME (optional toggle) */
@@ -42,16 +43,40 @@
 
     /* Header */
     header{
-      height:52px; display:flex; align-items:center; gap:10px;
-      padding:0 12px; border-bottom:1px solid var(--grid);
-      white-space:nowrap; overflow:hidden; background:var(--panel);
+      height: var(--headerH);
+      display:flex; align-items:flex-start; gap:14px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--grid);
+      background:var(--panel);
+      white-space:normal;           /* allow wrapping */
+      overflow:hidden;
     }
-    header h1{ font-size:16px; margin:0; font-weight:600; color:var(--text); }
-    header .sub{ color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis }
+    .hdr-left{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+    header h1{
+      margin:0;
+      font-size:22px;               /* bigger, punchier */
+      line-height:1.15;
+      font-weight:800;
+      letter-spacing:.2px;
+      color:var(--text);
+    }
+    header .subtitle{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.25;
+    }
+    header .byline{
+      color:var(--muted);
+      font-size:12px;
+    }
+    header .byline a{
+      color:inherit; text-decoration:none; border-bottom:1px dotted #cbd5e1;
+    }
+    header .byline a:hover{ color:var(--text); text-decoration:underline; }
 
     /* Layout */
     .layout{
-      position:absolute; inset:52px 0 0 0;
+      position:absolute; inset: var(--headerH) 0 0 0;
       display:grid; grid-template-columns:340px 1fr; min-height:0;
     }
     @media (max-width:900px){ .layout{ grid-template-columns:280px 1fr; } }
@@ -183,7 +208,7 @@
       fill:rgba(255,255,255,.96);
       stroke:var(--grid); stroke-width:1;
       filter:drop-shadow(0 8px 16px rgba(0,0,0,.10));
-      rx:10; ry:10;
+      rx:auto; ry:auto;
     }
     .legend-title{ fill:var(--text); font-weight:600; font-size:12px }
 
@@ -268,28 +293,128 @@
       background:#f3f4f6; border-radius:4px; padding:1px 4px;
     }
 
+    /* --- Modes visibility --- */
+    body[data-mode="full"] .full-only{ display:block; }
+    body[data-mode="discover"] .full-only,
+    body[data-mode="rolling"]  .full-only{ display:none; }
+    body[data-mode="rolling"] #discoverSection { display: none; }
+    body[data-mode="rolling"] #resetSection    { display: none; }
+
+    /* Mode tabs (right side of header) */
+    .mode-tabs{ margin-left:auto; display:flex; gap:6px; }
+    .mode-tabs .tab{
+      padding:6px 10px; border:1px solid var(--grid); border-radius:8px;
+      background:#f6f8fe; color:#1f2937; cursor:pointer; font-weight:600; font-size:12px;
+    }
+    .mode-tabs .tab.active{ background:#e6f0ff; border-color:#c7d2fe; }
+
+    /* Rolling controls */
+    #rollingCtl{
+      position:absolute; left:12px; top:12px; z-index:15; display:none;
+      background:rgba(255,255,255,.96); border:1px solid var(--grid);
+      border-radius:10px; padding:8px 10px; gap:8px; align-items:center;
+      box-shadow:0 8px 24px rgba(0,0,0,.1);
+    }
+    #rollingCtl button{ border:1px solid var(--grid); border-radius:6px; padding:4px 8px; cursor:pointer; }
+    #rollingCtl input[type="range"]{ width:240px; }
+    body[data-mode="rolling"] #rollingCtl{ display:flex; }
+
+    /* Significant-event callout */
+    #callout{
+      position:absolute; right:12px; top:12px; max-width:320px; z-index:16; display:none;
+      background:#fff; border:1px solid var(--grid); border-radius:10px; padding:10px 12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
+    }
+    #callout .c-title{ font-weight:700; margin-bottom:4px; }
+    #callout .c-body{ color:var(--muted); font-size:12px; }
+    #callout .c-actions{ margin-top:6px; }
+    #callout .c-actions a{ font-size:12px; text-decoration:none; color:#2563eb; }
+
+    /* Move controls into sidebar panel; hide the old overlay */
+    #rollingCtl{ display:none !important; }
+
+    /* Show the new roll panel only in Rolling; hide Discover in Rolling */
+    .roll-panel{ display:none; }
+    body[data-mode="rolling"] .roll-panel{ display:block; }
+    body[data-mode="rolling"] .discover{ display:none; }
+
+    /* Rolling feed (15 items max) */
+    .roll-feed{
+      margin-top:8px; border:1px solid var(--grid); border-radius:8px; padding:6px 8px;
+      max-height:260px; overflow:auto; background:var(--panel);
+    }
+    .roll-item{
+      display:grid;
+      grid-template-columns: auto auto auto minmax(0, 1fr); /* ← location can shrink */
+      gap:4px 10px; align-items:baseline;
+      padding:6px 0; border-bottom:1px dashed var(--grid);
+      font-size:12.5px;
+    }
+
+    .roll-item:last-child{ border-bottom:none; }
+
+    .roll-item > *{ min-width:0; }
+
+    .roll-item .mag{ font-weight:700; white-space:nowrap; }
+    .roll-item .meta{ color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+    .roll-item .loc{
+      color:var(--muted);
+      justify-self:end; text-align:right;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden; min-width:0;
+    }
+    .roll-item .meta{ color:var(--muted); font-variant-numeric:tabular-nums; }
+    .roll-badge{
+      display:inline-block; font-size:11px; padding:1px 6px; border-radius:999px; margin-left:6px;
+      background:#eef2ff; border:1px solid #c7d2fe; color:#1f2937;
+    }
+
+    /* Rolling label interval styling */
+    #rollLabel { font-variant-numeric: tabular-nums; }
+    .roll-lb-start { opacity:.75; font-size:12px; font-weight:500; }
+    .roll-lb-dash  { opacity:.55; margin:0 4px; }
+    .roll-lb-end   { font-weight:800; }
 
 </style>
 
 
 </head>
 <body>
+
 <header>
-  <h1>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</h1>
-  <div class="sub">Interactive Map of 100 Years (1925 - 2025) of Seismic Activity Across America</div>
+  <div class="hdr-left">
+    <h1>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</h1>
+    <div class="subtitle">Interactive Map of 100 Years (1925–2025) of Seismic Activity Across America</div>
+    <div class="byline">
+      <b>Group&nbsp;7 ·</b>
+      <a>Dongting&nbsp;Cai (docai@ucsd.edu)</a>,
+      <a>Chiu-Chiu (Jojo) Lin (jol145@ucsd.edu)</a>,
+      <a>Albab&nbsp;Newaz (anewaz@ucsd.edu) </a>
+    </div>
+  </div>
+
 </header>
 
 <div class="layout">
   <aside class="sidebar">
-    <div class="filters">
 
+    <div class="mode-tabs">
+        <button id="modeDiscover" class="tab active">Discover Mode</button>
+        <button id="modeRolling"  class="tab">Rolling Player</button>
+        <button id="modeFull"     class="tab">Full Explore</button>
+    </div>
+
+    <hr />
+
+    <div class="filters">
       <div class="section">
         <div class="row"><div class="label">Magnitude</div><div class="valuespan" id="magVals">—</div></div>
-        <div class="slider2">
+        <div class="slider2 full-only">
           <input id="magMinR" class="lower" type="range" step="0.1">
           <input id="magMaxR" class="upper" type="range" step="0.1">
         </div>
-        <div class="row values">
+        <div class="row values full-only">
           <div class="valuebox">
               <span>Min</span><input id="magMinN" type="number" step="0.1"><span></span>
               <span>Max</span><input id="magMaxN" type="number" step="0.1"></div>
@@ -306,11 +431,11 @@
 
       <div class="section">
         <div class="row"><div class="label">Depth (km)</div><div class="valuespan" id="depthVals">—</div></div>
-        <div class="slider2">
+        <div class="slider2 full-only">
           <input id="depthMinR" class="lower" type="range" step="10">
           <input id="depthMaxR" class="upper" type="range" step="10">
         </div>
-        <div class="row values">
+        <div class="row values full-only">
           <div class="valuebox"><span>Min</span><input id="depthMinN" type="number" step="10"><span></span><span>Max</span><input id="depthMaxN" type="number" step="10"></div>
         </div>
         <div class="checkboxrow"><label><input id="includeNA" type="checkbox" checked> Include N/A</label></div>
@@ -318,16 +443,16 @@
 
       <div class="section">
         <div class="row"><div class="label">Year</div><div class="valuespan" id="yearVals">—</div></div>
-        <div class="slider2">
+        <div class="slider2 full-only">
           <input id="yearMinR" class="lower" type="range" step="1">
           <input id="yearMaxR" class="upper" type="range" step="1">
         </div>
-        <div class="row values">
+        <div class="row values full-only">
           <div class="valuebox"><span>Min</span><input id="yearMinN" type="number" step="1"><span></span><span>Max</span><input id="yearMaxN" type="number" step="1"></div>
         </div>
       </div>
 
-      <div class="section">
+      <div class="section full-only">
         <div class="row">
           <div class="label">Location</div>
           <div class="valuespan helper">Add cities or States</div>
@@ -345,21 +470,39 @@
         </div>
       </div>
 
-      <div class="section" style="padding-top:4px;">
+      <div class="section full-only" style="padding-top:4px;">
         <div class="label" style="opacity:.85;">Note: Click empty map to reset zoom.</div>
       </div>
 
-      <div class="section">
+      <!-- Rolling Playback (shown only in Rolling mode) -->
+      <div class="section roll-panel">
+        <div class="label" style="display:flex;align-items:center;gap:8px;">
+          Rolling Playback
+          <span id="rollLabel" class="valuespan" style="margin-left:auto">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="rollPlay" title="Play / Pause">▶</button>
+          <input id="rollSlider" type="range" style="width:100%">
+          <button id="rollReplay" title="Replay" style="display:none">⟲</button>
+        </div>
+
+        <!-- Live monthly feed -->
+        <div id="rollFeed" class="roll-feed"></div>
+      </div>
+
+
+      <div class="section" id="discoverSection">
           <div class="label">Discover the Century</div>
           <div class="discover">
             <button class="discover-btn" id="discoverTop10">Top 10 Earthquakes</button>
             <button class="discover-btn" id="discoverDeepest">Deepest Earthquake</button>
             <button class="discover-btn" id="discoverShallowest">Shallowest Earthquake</button>
             <button class="discover-btn" id="discoverRecent">Most Recent Earthquake</button>
+            <button class="discover-btn" id="discoverSignificant">Significant Earthquakes</button>
           </div>
       </div>
 
-      <div class="section" style="margin-top: 10px;">
+      <div class="section" id="resetSection" style="margin-top: 10px;">
         <button id="resetBtn">🔄 Reset Filters</button>
       </div>
 
@@ -379,12 +522,295 @@
   <div class="view">
     <svg id="svg" preserveAspectRatio="xMidYMid meet"></svg>
     <div class="tooltip" id="tooltip"></div>
+
+    <!-- Click-callout for “Significant” story (appears on dot click) -->
+    <div id="callout"></div>
+
   </div>
 </div>
 
 <script>
 
 const normId = v => String(v).padStart(2, "0");
+
+/* ---------- Modes & Rolling state ---------- */
+document.body.dataset.mode = "discover"; // default landing
+let mode = "discover";
+
+function setActiveTab(which){
+  ["modeDiscover","modeRolling","modeFull"].forEach(id=>{
+    const b = document.getElementById(id);
+    if (b) b.classList.toggle("active", id === which);
+  });
+}
+
+function setMode(m){
+  if (m === mode) return;
+  mode = m;
+  document.body.dataset.mode = (m === "full" ? "full" : m);
+  setActiveTab(m === "discover" ? "modeDiscover" : m === "rolling" ? "modeRolling" : "modeFull");
+  clearStory();
+  hideCallout();
+
+  if (m === "discover"){
+    resetRollingState();                          // ← NEW: fully leave rolling
+    applyStory("top10", { syncUI:false });        // default view for Discover
+  } else if (m === "rolling"){
+    initRollingUI();
+    stopRolling();                                // start paused; user presses ▶
+  } else if (m === "full"){
+    stopRolling();
+    requestRepaint();
+  }
+}
+
+// --- Month helpers ---
+function monthIndexFromMs(ms){
+  const d = new Date(ms);
+  return d.getUTCFullYear()*12 + d.getUTCMonth(); // integer month index
+}
+function msFromMonthIndex(mi){
+  const y = Math.floor(mi/12), m = mi % 12;
+  return Date.UTC(y, m, 1); // first day of that month (UTC)
+}
+
+function monthStr(mi){ return new Date(msFromMonthIndex(mi)).toISOString().slice(0,7); }
+
+/* Show [start..end] where end = rollingMon and start = max(minMonth, end-5) */
+function updateRollLabel(){
+  const el = document.getElementById("rollLabel");
+  if (!el) return;
+
+  // Guard if not initialized yet
+  const end = Number.isFinite(rollingMon) ? rollingMon
+            : (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0]) ? tsMonthExt[0] : null);
+  if (!Number.isFinite(end)){ el.textContent = "—"; return; }
+
+  const minM = (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) ? tsMonthExt[0] : end;
+  const start = Math.max(minM, end - 5);
+
+  el.innerHTML = `
+    <span class="roll-lb-start">${monthStr(start)}</span>
+    <span class="roll-lb-dash">to</span>
+    <span class="roll-lb-end">${monthStr(end)}</span>
+  `;
+}
+
+
+/* ---------- Rolling animation ---------- */
+const dayMs = 24*3600*1000;
+const ROLL_STEP_MONTHS = 1;
+const ROLL_INTERVAL_MS = 50;
+
+let tsExt = [null, null];         // (keep; still computed)
+let tsMonthExt = [null, null];    // NEW: [minMonthIdx, maxMonthIdx]
+let rollingMon = null;            // NEW: current month index (integer)
+let rollingNow = null;            // keep var name around; we’ll no longer rely on it
+let rollTimer = null;
+
+function initRollingUI(){
+  const s = document.getElementById("rollSlider");
+
+  // Prefer computed month extent; if not ready, fallback from year sliders
+  let m0 = (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) ? tsMonthExt[0] : null;
+  let m1 = (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[1])) ? tsMonthExt[1] : null;
+
+  if (!m0 || !m1){
+    const yrMinEl = document.getElementById("yearMinR");
+    const yrMaxEl = document.getElementById("yearMaxR");
+    const y0 = +(yrMinEl?.min || yrMinEl?.value || 1925);
+    const y1 = +(yrMaxEl?.max || yrMaxEl?.value || 2025);
+    m0 = y0*12;           // Jan y0
+    m1 = y1*12 + 11;      // Dec y1
+    tsMonthExt = [m0, m1];
+  }
+
+  rollingMon = m0;
+
+  // Slider in month indices
+  s.min = m0; s.max = m1; s.step = 1; s.value = rollingMon;
+
+  // Label as YYYY-MM
+  document.getElementById("rollLabel").textContent =
+    new Date(msFromMonthIndex(rollingMon)).toISOString().slice(0,7);
+
+  document.getElementById("rollPlay").textContent = "▶"; // paused
+  document.getElementById("rollReplay").style.display = "none"; // <— add
+
+  updateRollLabel();
+  updateRollingFeed();
+  requestRepaint();
+}
+
+function tickRolling(){
+  rollingMon = Math.min(rollingMon + ROLL_STEP_MONTHS, tsMonthExt[1]);
+  const s = document.getElementById("rollSlider");
+  s.value = rollingMon;
+  updateRollLabel();
+  requestRepaint();
+  if (rollingMon >= tsMonthExt[1]) {
+    stopRolling();
+    document.getElementById("rollReplay").style.display = "inline-block";
+  }
+}
+
+function startRolling(){
+  if (!rollTimer){
+    rollTimer = setInterval(tickRolling, ROLL_INTERVAL_MS);
+    document.getElementById("rollPlay").textContent = "⏸";
+  }
+}
+
+function stopRolling(){
+    if (rollTimer){ clearInterval(rollTimer);
+        rollTimer = null;
+        document.getElementById("rollPlay").textContent = "▶";
+    }
+}
+
+function resetRollingState(){
+  // stop timer + put UI back to a paused, hidden-feed baseline
+  stopRolling();
+  // reset the month pointer to the first month in the data (if known)
+  if (Array.isArray(tsMonthExt) && Number.isFinite(tsMonthExt[0])) {
+    rollingMon = tsMonthExt[0];
+  }
+  // sync the slider + label + feed
+  const s = document.getElementById("rollSlider");
+  if (s && Number.isFinite(rollingMon)) s.value = rollingMon;
+  document.getElementById("rollReplay").style.display = "none";
+  updateRollLabel();
+  updateRollingFeed();  // this clears the list when not in rolling mode
+  // ask for a repaint so alpha logic re-computes with isRolling()===false
+  requestRepaint();
+}
+
+function replayRolling(){
+  if (!Array.isArray(tsMonthExt) || !Number.isFinite(tsMonthExt[0])) return;
+  rollingMon = tsMonthExt[0];
+  const s = document.getElementById("rollSlider");
+  s.value = rollingMon;
+  document.getElementById("rollLabel").textContent =
+    new Date(msFromMonthIndex(rollingMon)).toISOString().slice(0,7);
+  document.getElementById("rollReplay").style.display = "none";
+  updateRollLabel();
+  requestRepaint();
+  startRolling();
+}
+
+function isRolling() {
+    return document.body.dataset.mode === "rolling";
+}
+
+function rollingAlpha(d){
+  if (!isRolling()) return 1;
+  if (!Number.isFinite(d.tsMonth)) return 0;
+
+  const dm = rollingMon - d.tsMonth;  // months since event (integer)
+  if (dm < 0) return 0;               // future
+  if (dm < 1) return 1.00;            // current month (brightest)
+  if (dm < 2) return 0.80;            // +1 month
+  if (dm < 3) return 0.55;            // +2
+  if (dm < 4) return 0.36;            // +3
+  if (dm < 5) return 0.22;            // +4
+  if (dm < 6) return 0.10;            // +5
+  return 0;                           // +6 or older → gone
+}
+
+function buildRollingFeedItems(){
+  if (!isRolling()) return [];
+  // include current + last 5 months (the same visibility window we draw)
+  const items = (window.points || []).filter(d =>
+    Number.isFinite(d.tsMonth) &&
+    d.tsMonth <= rollingMon &&
+    (rollingMon - d.tsMonth) < 6 &&
+    passesFilters(d) &&
+    (document.getElementById("hideUnconverted").checked ? d._canMw : true)
+  );
+
+  // sort most recent first (month then timestamp)
+  items.sort((a,b) => (b.tsMonth - a.tsMonth) || (b.ts - a.ts));
+  return items.slice(0, 15);
+}
+
+function formatMagForList(d){
+  const useMw = document.getElementById("useMw").checked;
+  if (useMw && d._canMw){
+    return d._converted ? `Mw ${d.magMw.toFixed(1)}*` : `Mw ${d.magMw.toFixed(1)}`;
+  } else {
+    // original reported scale
+    const mt = (d.magTypeOrig ? String(d.magTypeOrig).trim().toUpperCase() : (d.magType||""));
+    const short = magTypeShort(mt);
+    return d.mag != null ? `${short} ${d.mag.toFixed(1)}**` : "M?";
+  }
+}
+
+function monthBadge(d){
+  const dm = rollingMon - d.tsMonth;
+  if (dm < 1) return "Now";
+  return `-${Math.floor(dm)}m`;
+}
+
+function updateRollingFeed(){
+  const feed = document.getElementById("rollFeed");
+  if (!feed) return;
+  if (!isRolling()){ feed.innerHTML = ""; return; }
+
+  const rows = buildRollingFeedItems().map(d => {
+    const mag   = formatMagForList(d);
+    const depth = (d.depth==null) ? "N/A" : `${Math.round(d.depth)} km`;
+    const loc   = d.locLabel || d.place || d.region || "Location";
+    const badge = monthBadge(d); // "Now", "-1m", ...
+
+    return `
+      <div class="roll-item" data-key="${d._key||""}">
+        <div class="time"><span class="roll-badge">${badge}</span></div>
+        <div class="mag">${mag}</div>
+        <div class="meta">${depth}</div>
+        <div class="loc" title="${(d.place||"").replace(/"/g,'&quot;')}">${loc}</div>
+      </div>
+    `;
+  }).join("");
+
+  feed.innerHTML = rows || `<div class="valuespan" style="padding:6px 0;">No events in view.</div>`;
+}
+
+
+/* ---------- Significant events (editable list) ---------- */
+// Add/edit entries without touching the CSV. Each item gets a matcher and optional content.
+const SIGNIFICANT = [
+  // Examples (tweak the matchers to your CSV’s place strings/times if needed):
+  { key:"1964-alaska",  title:"1964 Great Alaska (Mw 9.2)", link:"https://earthquake.usgs.gov/earthquakes/eventpage/19640328_0336",
+    match: d => d.year===1964 && (d.locStAbbr==="AK" || /alaska|prince william|gulf of alaska/i.test(d.place||"")) },
+  { key:"1994-northridge", title:"1994 Northridge, CA", link:"https://earthquake.usgs.gov/earthquakes/eventpage/ci3144585",
+    match: d => d.year===1994 && /northridge|san fernando|los angeles/i.test(d.place||"") },
+  { key:"1989-loma-prieta", title:"1989 Loma Prieta, CA", link:"https://earthquake.usgs.gov/earthquakes/eventpage/nc216859",
+    match: d => d.year===1989 && /loma prieta|santa cruz|san francisco/i.test(d.place||"") },
+  { key:"2011-virginia", title:"2011 Virginia M5.8", link:"https://earthquake.usgs.gov/earthquakes/eventpage/se60231711",
+    match: d => d.year===2011 && (/virginia/i.test(d.place||"") || d.locStAbbr==="VA") }
+];
+
+function tagSignificant(list){
+  list.forEach(d => {
+    d._sig = null;
+    for (const s of SIGNIFICANT){
+      if (s.match(d)) { d._sig = s; break; }
+    }
+  });
+}
+
+function showCalloutFor(d){
+  const box = d3.select("#callout");
+  const s = d._sig;
+  if (!s){ hideCallout(); return; }
+  box.html(`
+    <div class="c-title">${s.title||"Significant Earthquake"}</div>
+    <div class="c-body">${d.place || displayLabel(d) || ""}</div>
+    <div class="c-actions">${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">Learn more →</a>` : ""}</div>
+  `).style("display","block");
+}
+function hideCallout(){ d3.select("#callout").style("display","none"); }
+document.addEventListener("click", (e)=>{ const c=document.getElementById("callout"); if (c && !c.contains(e.target)) hideCallout(); });
 
 (async function () {
   /* ---------- Small helpers ---------- */
@@ -462,7 +888,8 @@ const normId = v => String(v).padStart(2, "0");
     if (s === "ms") return "MS";
     if (s === "mb") return "MB";
     if (["mblg","mlg","lg"].includes(s)) return "MBLG"; // Lg family
-    if (["ml","mlr","ma"].includes(s)) return "ML";     // ML variants; 'ma' treated as ML-like for display ONLY
+    if (["ml","mlr"].includes(s)) return "ML";
+    if (s === "ma") return "MA";
 
     // Duration/coda & other operational types
     if (s === "md") return "MD";
@@ -574,6 +1001,7 @@ const normId = v => String(v).padStart(2, "0");
   function magVal(d){
     return document.getElementById("useMw").checked ? (d.magMw ?? d.mag) : d.mag;
   }
+  window.magVal = magVal;
 
 
   let _raf = 0;
@@ -583,107 +1011,112 @@ const normId = v => String(v).padStart(2, "0");
       _raf = 0;
       render();
       drawInsetsTopRow();
+        updateRollingFeed();
     });
   }
+  window.requestRepaint = requestRepaint;
 
-/* ---------- Story mode (Discover the Century) ---------- */
-let storyMode = null; // 'top10' | 'deepest' | 'shallowest' | 'recent' | null
+  /* ---------- Story mode (Discover the Century) ---------- */
+  let storyMode = null; // 'top10' | 'deepest' | 'shallowest' | 'recent' | null
 
-function clearStory(){
-  storyMode = null;
-  d3.selectAll("circle.quake").classed("dimmed", false).classed("story-hi", false);
-}
-
-function fadeAndHighlight(selArray){
-  const set = new Set(selArray);
-  d3.selectAll("circle.quake").classed("dimmed", true).classed("story-hi", false);
-  const hi = d3.selectAll("circle.quake")
-    .filter(d => set.has(d))
-    .classed("dimmed", false)
-    .classed("story-hi", true);
-  hi.raise();  // ensure highlights sit above dimmed dots
-}
-
-// Update sliders UI *without* triggering events (informational display of selection bounds)
-function setMagUI(lo, hi){
-  const loR = document.getElementById('magMinR'), hiR = document.getElementById('magMaxR');
-  const loN = document.getElementById('magMinN'), hiN = document.getElementById('magMaxN');
-  const label = document.getElementById('magVals');
-  const dom = sizeScale.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
-  loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
-  loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
-  label.textContent = `${(+lo).toFixed(1)} – ${(+hi).toFixed(1)}`;
-}
-
-function setDepthUI(lo, hi){
-  const loR = document.getElementById('depthMinR'), hiR = document.getElementById('depthMaxR');
-  const loN = document.getElementById('depthMinN'), hiN = document.getElementById('depthMaxN');
-  const label = document.getElementById('depthVals');
-  const dom = color.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
-  loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
-  loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
-  label.textContent = `${lo} – ${hi}`;
-}
-
-function setYearUI(lo, hi){
-  const loR = document.getElementById('yearMinR'), hiR = document.getElementById('yearMaxR');
-  const loN = document.getElementById('yearMinN'), hiN = document.getElementById('yearMaxN');
-  const label = document.getElementById('yearVals');
-  const dom = yearExt; const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
-  loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
-  loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
-  label.textContent = `${lo} – ${hi}`;
-}
-
-// Compute selections
-function storySelect(kind){
-  if (kind === "top10"){
-    return points
-      .filter(d => isFinite(magVal(d)))
-      .sort((a,b) => d3.descending(magVal(a), magVal(b)))
-      .slice(0,10);
-  } else if (kind === "deepest"){
-    const m = d3.max(points.filter(d=>d.depth!=null), d=>d.depth);
-    return points.filter(d=>d.depth!=null && d.depth===m);
-  } else if (kind === "shallowest"){
-    const m = d3.min(points.filter(d=>d.depth!=null), d=>d.depth);
-    return points.filter(d=>d.depth!=null && d.depth===m);
-  } else if (kind === "recent"){
-    const getTS = d=> d.time ? Date.parse(d.time) : -Infinity;
-    const m = d3.max(points, getTS);
-    return points.filter(d=> getTS(d)===m);
+  function clearStory(){
+    storyMode = null;
+    d3.selectAll(".quake").classed("dimmed", false).classed("story-hi", false);
   }
-  return [];
-}
+  window.clearStory = clearStory;
 
-// Apply a story (full data visible; highlight selection; sliders reflect bounds)
-function applyStory(kind, { syncUI = true } = {}){
-  storyMode = kind;
-
-  // show all points (no filtering), keep current zoom
-  magRange = [sizeScale.domain()[0], sizeScale.domain()[1]];
-  depthRange = [color.domain()[0], color.domain()[1]];
-  yearRange = [yearExt[0], yearExt[1]];
-  render(); drawInsetsTopRow();
-
-  const sel = storySelect(kind);
-  if (!sel.length){ clearStory(); return; }
-
-  // Fade others, highlight selection
-  fadeAndHighlight(sel);
-
-  if (syncUI){
-      // Update slider UI to selection bounds (no filtering change)
-      const magLo = d3.min(sel, d=>d.mag), magHi = d3.max(sel, d=>d.mag);
-      const depLo = d3.min(sel, d=>d.depth ?? color.domain()[0]);
-      const depHi = d3.max(sel, d=>d.depth ?? color.domain()[1]);
-      const yrLo  = d3.min(sel, d=>d.year), yrHi  = d3.max(sel, d=>d.year);
-
-      setMagUI(+magLo.toFixed(1), +magHi.toFixed(1));
-      setDepthUI(Math.round(depLo), Math.round(depHi));
-      setYearUI(yrLo, yrHi);
+  function fadeAndHighlight(selArray){
+    const set = new Set(selArray);
+    d3.selectAll(".quake").classed("dimmed", true).classed("story-hi", false);
+    d3.selectAll(".quake")
+      .filter(d => set.has(d))
+      .classed("dimmed", false)
+      .classed("story-hi", true)
+      .raise();
   }
-}
+
+  // Update sliders UI *without* triggering events (informational display of selection bounds)
+  function setMagUI(lo, hi){
+    const loR = document.getElementById('magMinR'), hiR = document.getElementById('magMaxR');
+    const loN = document.getElementById('magMinN'), hiN = document.getElementById('magMaxN');
+    const label = document.getElementById('magVals');
+    const dom = sizeScale.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+    loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+    loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+    label.textContent = `${(+lo).toFixed(1)} – ${(+hi).toFixed(1)}`;
+  }
+
+  function setDepthUI(lo, hi){
+    const loR = document.getElementById('depthMinR'), hiR = document.getElementById('depthMaxR');
+    const loN = document.getElementById('depthMinN'), hiN = document.getElementById('depthMaxN');
+    const label = document.getElementById('depthVals');
+    const dom = color.domain(); const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+    loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+    loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+    label.textContent = `${lo} – ${hi}`;
+  }
+
+  function setYearUI(lo, hi){
+    const loR = document.getElementById('yearMinR'), hiR = document.getElementById('yearMaxR');
+    const loN = document.getElementById('yearMinN'), hiN = document.getElementById('yearMaxN');
+    const label = document.getElementById('yearVals');
+    const dom = yearExt; const p=v=>100*(v-dom[0])/(dom[1]-dom[0]||1);
+    loR.value=lo; hiR.value=hi; loN.value=lo; hiN.value=hi;
+    loR.style.background = `linear-gradient(to right,#dfe8f6 ${p(dom[0])}%,var(--accent) ${p(lo)}%,var(--accent) ${p(hi)}%,#dfe8f6 ${p(dom[1])}%)`;
+    label.textContent = `${lo} – ${hi}`;
+  }
+
+  // Compute selections
+  function storySelect(kind){
+    if (kind === "top10"){
+      return points
+        .filter(d => isFinite(magVal(d)))
+        .sort((a,b) => d3.descending(magVal(a), magVal(b)))
+        .slice(0,10);
+    } else if (kind === "deepest"){
+      const m = d3.max(points.filter(d=>d.depth!=null), d=>d.depth);
+      return points.filter(d=>d.depth!=null && d.depth===m);
+    } else if (kind === "shallowest"){
+      const m = d3.min(points.filter(d=>d.depth!=null), d=>d.depth);
+      return points.filter(d=>d.depth!=null && d.depth===m);
+    } else if (kind === "recent"){
+      const getTS = d=> d.time ? Date.parse(d.time) : -Infinity;
+      const m = d3.max(points, getTS);
+      return points.filter(d=> getTS(d)===m);
+    } else if (kind === "significant"){
+      return points.filter(d => d._sig);
+    }
+    return [];
+  }
+
+  // Apply a story (full data visible; highlight selection; sliders reflect bounds)
+  function applyStory(kind, { syncUI = true } = {}){
+    storyMode = kind;
+
+    // show all points (no filtering), keep current zoom
+    magRange = [sizeScale.domain()[0], sizeScale.domain()[1]];
+    depthRange = [color.domain()[0], color.domain()[1]];
+    yearRange = [yearExt[0], yearExt[1]];
+    render(); drawInsetsTopRow();
+
+    const sel = storySelect(kind);
+    if (!sel.length){ clearStory(); return; }
+
+    // Fade others, highlight selection
+    fadeAndHighlight(sel);
+
+    if (syncUI){
+        // Update slider UI to selection bounds (no filtering change)
+        const magLo = d3.min(sel, d=>d.mag), magHi = d3.max(sel, d=>d.mag);
+        const depLo = d3.min(sel, d=>d.depth ?? color.domain()[0]);
+        const depHi = d3.max(sel, d=>d.depth ?? color.domain()[1]);
+        const yrLo  = d3.min(sel, d=>d.year), yrHi  = d3.max(sel, d=>d.year);
+
+        setMagUI(+magLo.toFixed(1), +magHi.toFixed(1));
+        setDepthUI(Math.round(depLo), Math.round(depHi));
+        setYearUI(yrLo, yrHi);
+    }
+  }
 
 
   /* ---------- State maps ---------- */
@@ -762,7 +1195,6 @@ function applyStory(kind, { syncUI = true } = {}){
     recomputeInsetMembership();
   }
 
-
     const us = await fetch("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json").then(r=>r.json());
 
     const allStatesFC   = topojson.feature(us, us.objects.states);
@@ -818,7 +1250,6 @@ function applyStory(kind, { syncUI = true } = {}){
     }
 
 
-
     // IDs we want in the top-row insets only
     const excludedIds = new Set(["02","15","72"]); // AK, HI, PR
     const id2 = s => String(s.id).padStart(2,"0");
@@ -869,6 +1300,9 @@ function applyStory(kind, { syncUI = true } = {}){
     return { time:d.time, year, place:d.place||"", region:d.region||"", depth, mag, lat, lon, magType, magTypeOrig };
   });
   const points = data.filter(d => isFinite(d.lat) && isFinite(d.lon));
+
+  // Make data visible to the feed helpers defined outside the IIFE
+  window.points = points;
 
   // Precompute an approximate Mw for each event (maybe null if not convertible)
   points.forEach(d => { d.magMw = approxMw(d.mag, d.magType); });
@@ -1019,8 +1453,14 @@ function applyStory(kind, { syncUI = true } = {}){
 
         // 4) Quakes within that state/territory (geoContains = robust)
         const hideUnconverted = document.getElementById("hideUnconverted").checked;
+        const isRoll = isRolling();
         const pts = points.filter(d =>
-          passesFilters(d) && d._insetCode === ab && (!hideUnconverted || d._canMw)
+          passesFilters(d) &&
+          d._insetCode === ab &&
+          (!hideUnconverted || d._canMw) &&
+          (!isRoll || (Number.isFinite(d.tsMonth) &&
+              d.tsMonth <= rollingMon &&
+              (rollingMon - d.tsMonth) < 6))
         );
 
 
@@ -1031,7 +1471,17 @@ function applyStory(kind, { syncUI = true } = {}){
           .attr("r", d => dataRadius(magVal(d), 1) / s)
           .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
           .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-          .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+          .attr("fill-opacity", d => {
+            const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+            return base * rollingAlpha(d);
+          })
+          .on("click", (event, d) => {
+            if (mode === "discover" && storyMode === "significant" && d._sig){
+              showCalloutFor(d);
+              event.stopPropagation();
+            }
+          })
+
           .on("mousemove", (event, d) => {
               tooltip.html(tooltipHTML(d)).style("opacity", 1);
               placeTooltip(event);
@@ -1048,7 +1498,17 @@ function applyStory(kind, { syncUI = true } = {}){
           })
           .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
           .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-          .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+          .attr("fill-opacity", d => {
+            const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+            return base * rollingAlpha(d);
+          })
+          .on("click", (event, d) => {
+            if (mode === "discover" && storyMode === "significant" && d._sig){
+              showCalloutFor(d);
+              event.stopPropagation();
+            }
+          })
+
           .on("mousemove", (event, d) => {
             tooltip.html(tooltipHTML(d)).style("opacity", 1);
             placeTooltip(event);
@@ -1431,6 +1891,7 @@ function applyStory(kind, { syncUI = true } = {}){
     }
     return magOK && yearOK && depthOK && locOK;
   }
+  window.passesFilters = passesFilters;
 
 
   /* ---------- Render ---------- */
@@ -1439,8 +1900,14 @@ function applyStory(kind, { syncUI = true } = {}){
       const allowNA = document.getElementById("includeNA").checked;
 
       const hideUnconverted = document.getElementById("hideUnconverted").checked;
+      const isRoll = isRolling();
       const filtered = points.filter(d =>
-        passesFilters(d) && !d._insetCode && (!hideUnconverted || d._canMw)
+        passesFilters(d) &&
+        !d._insetCode &&
+        (!hideUnconverted || d._canMw) &&
+        (!isRoll || (Number.isFinite(d.tsMonth) &&
+            d.tsMonth <= rollingMon &&
+            (rollingMon - d.tsMonth) < 6))
       );
 
 
@@ -1454,7 +1921,17 @@ function applyStory(kind, { syncUI = true } = {}){
         .attr("r", d => dataRadius(magVal(d)))
         .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
         .on("mousemove", (event, d) => {
           const [x,y] = d3.pointer(event, document.querySelector(".view"));
           tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
@@ -1465,7 +1942,17 @@ function applyStory(kind, { syncUI = true } = {}){
         .attr("r", d => dataRadius(magVal(d)))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
-        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
         .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`));
 
       C.exit().remove();
@@ -1480,7 +1967,17 @@ function applyStory(kind, { syncUI = true } = {}){
             .size(Math.PI * Math.pow(dataRadius(magVal(d)), 2))())
         .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
         .on("mousemove", (event, d) => {
           const [x,y] = d3.pointer(event, document.querySelector(".view"));
           tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
@@ -1492,7 +1989,17 @@ function applyStory(kind, { syncUI = true } = {}){
             .size(Math.PI * Math.pow(dataRadius(magVal(d)), 2))())
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
         .attr("class", d => "quake tri" + (d.depth==null ? " nodata" : ""))
-        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .attr("fill-opacity", d => {
+          const base = d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]);
+          return base * rollingAlpha(d);
+        })
+        .on("click", (event, d) => {
+          if (mode === "discover" && storyMode === "significant" && d._sig){
+            showCalloutFor(d);
+            event.stopPropagation();
+          }
+        })
+
         .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`));
 
       T.exit().remove();
@@ -1502,6 +2009,32 @@ function applyStory(kind, { syncUI = true } = {}){
   }
 
   updateProjection();
+
+  // ---- Parse per-point timestamps & compute extent (needed for Rolling & Significant)
+  points.forEach(d => {
+    let ts = NaN;
+    if (d.time) {
+      if (/^\d{4}-\d{2}-\d{2}/.test(d.time)) {
+        ts = Date.parse(d.time);                  // ISO-like strings
+      } else if (!Number.isNaN(+d.time)) {
+        const n = +d.time; ts = (n > 1e12) ? n : n * 1000; // epoch s→ms if needed
+      } else {
+        ts = Date.parse(String(d.time));
+      }
+    }
+    d.ts = Number.isFinite(ts) ? ts : NaN;
+  });
+
+  const _tsVals = points.map(d => d.ts).filter(Number.isFinite);
+  tsExt = d3.extent(_tsVals);
+
+  // Monthly timeline support
+  points.forEach(d => { d.tsMonth = Number.isFinite(d.ts) ? monthIndexFromMs(d.ts) : NaN; });
+  const _tsMonths = points.map(d => d.tsMonth).filter(Number.isFinite);
+  tsMonthExt = d3.extent(_tsMonths);
+
+  tagSignificant(points);
+
   drawLegend();
   render();
   drawInsetsTopRow();
@@ -1511,6 +2044,20 @@ function applyStory(kind, { syncUI = true } = {}){
   document.getElementById("discoverDeepest").addEventListener("click", ()=> applyStory("deepest"));
   document.getElementById("discoverShallowest").addEventListener("click", ()=> applyStory("shallowest"));
   document.getElementById("discoverRecent").addEventListener("click", ()=> applyStory("recent"));
+  document.getElementById("discoverSignificant").addEventListener("click", ()=> applyStory("significant"));
+  document.getElementById("modeDiscover").addEventListener("click", ()=> setMode("discover"));
+  document.getElementById("modeRolling").addEventListener("click",  ()=> setMode("rolling"));
+  document.getElementById("modeFull").addEventListener("click",     ()=> setMode("full"));
+  document.getElementById("rollPlay").addEventListener("click",     ()=> (rollTimer?stopRolling():startRolling()));
+  document.getElementById("rollReplay").addEventListener("click", replayRolling);
+  document.getElementById("rollSlider").addEventListener("input", (e) => {
+      rollingMon = +e.target.value;
+      document.getElementById("rollReplay").style.display =
+          (rollingMon >= tsMonthExt[1]) ? "inline-block" : "none";
+      updateRollLabel();
+      requestRepaint(); // will also call updateRollingFeed()
+  });
+
 
   // // --- Magnitude normalization toggle ---
   // document.getElementById("useMw").addEventListener("change", () => {
