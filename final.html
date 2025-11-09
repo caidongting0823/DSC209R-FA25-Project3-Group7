@@ -1085,9 +1085,9 @@ function applyStory(kind, { syncUI = true } = {}){
     .sort((a,b)=> d3.descending(a.count,b.count) || d3.ascending(a.label,b.label));
 
   /* ---------- Scales & UI state (safe domains) ---------- */
-  const depthExt  = safeExtent(points.map(d=>d.depth).filter(v=>v!=null && isFinite(v)), [0,700]);
-  const dDomMin   = clamp(Math.floor(depthExt[0]), 0, 10000);
-  const dDomMax   = clamp(Math.ceil(depthExt[1]), dDomMin+1, 10000);
+  const depthExt  = safeExtent(points.map(d=>d.depth).filter(v=>v!=null && isFinite(v)), [-10,700]);
+  const dDomMin   = Math.floor(depthExt[0]);
+  const dDomMax   = Math.max(Math.ceil(depthExt[1]), dDomMin + 1);
 
   const magExt    = safeExtent(points.map(d=>d.mag).filter(v=>v!=null && isFinite(v)), [4.5,9.5]);
   const yearExt   = safeExtent(points.map(d=>d.year).filter(v=>v!=null && isFinite(v)), [1900, 2025]);
@@ -1355,7 +1355,9 @@ function applyStory(kind, { syncUI = true } = {}){
         .attr("stroke","#243142");
 
       // Ticks at interpretable breaks
-      const breaksAll = [0,15,35,70,120,200,275];
+      const breaksAll = (d0 < 0)
+        ? [d0, 0, 15, 35, 70, 120, 200, 275]
+          : [0, 15, 35, 70, 120, 200, 275];
       const breaks = breaksAll.filter(v => v>=d0 && v<=d1);
       const tickY = y0 + 26 + depthBarH + 12;
       const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted') || '#6b7280';
