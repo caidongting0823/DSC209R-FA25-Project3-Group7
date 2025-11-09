@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project 3 Write‑Up — Group 7 — A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</title>
+  <meta name="description" content="Design rationale and development process for Group 7's Project 3 interactive map of U.S. earthquakes (1925–2025)." />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#111827;
+      --muted:#6b7280;
+      --panel:#ffffff;
+      --grid:#e5e7eb;
+      --accent:#2563eb;
+      --accent-2:#10b981;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#0b0e14;
+        --ink:#e8eef7;
+        --muted:#9fb0c6;
+        --panel:#0f141c;
+        --grid:#243142;
+        --accent:#3b82f6;
+        --accent-2:#34d399;
+      }
+    }
+    *{ box-sizing: border-box }
+    html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial }
+    .wrap{ max-width:1100px; margin:28px auto 80px; padding:0 16px }
+    header{
+      background:linear-gradient(120deg, rgba(37,99,235,.06), rgba(16,185,129,.05));
+      border:1px solid var(--grid); border-radius:16px;
+      padding:18px; margin-bottom:16px
+    }
+    h1,h2,h3{ line-height:1.2; margin:.2em 0 .45em }
+    h1{ font-size:1.75rem }
+    h2{ font-size:1.25rem; margin-top:1.2rem }
+    h3{ font-size:1.05rem; color:var(--muted) }
+    a{ color:var(--accent); text-decoration:none } a:hover{ text-decoration:underline }
+    .sub{ color:var(--muted); font-size:.95rem }
+    .meta{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:6px; margin-top:6px }
+    .badge{ display:inline-block; padding:2px 10px; border-radius:999px; background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.25); color:var(--ink) }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px }
+    @media (max-width:880px){ .grid{ grid-template-columns:1fr } }
+    .card{ background:var(--panel); border:1px solid var(--grid); border-radius:12px; padding:16px }
+    .callout{ border-left:4px solid var(--accent-2); background:rgba(16,185,129,.06); padding:8px 12px; border-radius:8px }
+    .nav{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 2px }
+    .nav a{ display:inline-block; padding:6px 10px; border:1px solid var(--grid); border-radius:8px; background:var(--panel) }
+    code, .code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace }
+    ul.tight > li{ margin-bottom:6px }
+    footer{ margin-top:28px; color:var(--muted); font-size:.92rem }
+    .iframe-box{ aspect-ratio: 16/9; border:1px dashed var(--grid); border-radius:12px; overflow:hidden; background:rgba(0,0,0,.03) }
+    iframe{ width:100%; height:100%; border:0 }
+    .small{ font-size:.92rem; color:var(--muted) }
+    .hr{ border:none; border-top:1px dashed var(--grid); margin:18px 0 }
+    .tbl{ width:100%; border-collapse:collapse; }
+    .tbl th,.tbl td{ border:1px solid var(--grid); padding:8px 10px; vertical-align:top }
+    .tbl th{ background:rgba(37,99,235,.06); text-align:left }
+    .pill{ display:inline-block; padding:2px 8px; border:1px solid var(--grid); border-radius:999px; font-size:.85rem; color:var(--muted) }
+    .todo{ background: rgba(255,183,3,.12); border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Project 3 <em>A Century in Motion: U.S. Earthquakes (Mw ≥ 4.5)</em></h1>
+      <div class="meta">
+        <div><span class="badge">Group&nbsp;7</span> Dongting Cai, Chiu‑Chiu (Jojo) Lin, Albab Newaz</div>
+        <div><span class="badge">Course</span> DSC 209R, Fall 2025</div>
+      </div>
+    </header>
+
+    <section id="live-viz" class="card">
+      <h2>Live Demo</h2>
+      <p>
+        <strong><a href="https://caidongting0823.github.io/DSC209R-FA25-Project3-Group7/final.html">Click to Live Visualization Demo</a></strong>
+      </p>
+    </section>
+
+    <section id="rationale" class="card">
+      <h2>Description</h2>
+        This interactive visualization explores one century of U.S. earthquakes (1925–2025) with a focus on
+        moment magnitude (Mw ≥ 4.5), depth, and geography. Each earthquake is drawn as a mark on an Albers USA map
+        with dedicated insets for Alaska, Hawaii, and Puerto Rico. We encode magnitude by point size (√-scaled so
+        larger events stand out without overwhelming the view) and depth by a perceptual color ramp emphasizing
+        shallow crustal differences. Users can filter by year, magnitude, and depth via dual-range sliders and
+        quickly narrow the view to specific states or cities using a searchable location selector. Details-on-demand
+        tooltips reveal normalized Mw values (when available) alongside the original reported scale, helping the
+        audience compare events that were measured using different magnitude types.
+    </section>
+
+    <section id="process" class="card">
+      <h2>Reflection</h2>
+        Our goal was to make earthquake risk and patterns tangible at the event level while remaining faithful to
+        seismological nuance. Early pilots that mapped magnitude to color proved harder to read in dense clusters and
+        made depth “invisible,” so we chose size→magnitude and color→depth as orthogonal encodings. To address the
+        comparability issue across magnitude types (ML, Ms, mb, etc.), we surface Mw when reported or reliably
+        approximated, mark non-comparable cases distinctly, and standardize labels in a unit-first style
+        (e.g., “Mw 5.7”). Interaction is the primary vehicle for insight: users can slice the century by time,
+        depth, magnitude, and place; story buttons highlight notable subsets (e.g., deepest, most recent), and
+        the map supports smooth pan/zoom. Across iterations, we fixed label overflow, tuned radius limits,
+        and refined the depth legend to 275 km to improve trust and legibility.
+    </section>
+
+    <footer>
+      <div>Project 3, Group 7 / Last updated: Nov&nbsp;7, 2025</div>
+    </footer>
+  </div>
+</body>
+</html>
