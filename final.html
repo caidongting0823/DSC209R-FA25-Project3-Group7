@@ -1356,7 +1356,7 @@ function applyStory(kind, { syncUI = true } = {}){
 
       // Ticks at interpretable breaks
       const breaksAll = (d0 < 0)
-        ? [d0, 0, 15, 35, 70, 120, 200, 275]
+        ? [0, 15, 35, 70, 120, 200, 275]
           : [0, 15, 35, 70, 120, 200, 275];
       const breaks = breaksAll.filter(v => v>=d0 && v<=d1);
       const tickY = y0 + 26 + depthBarH + 12;
