@@ -1158,7 +1158,7 @@ function applyStory(kind, { syncUI = true } = {}){
     sync(domain[0],domain[1],false); onChange([domain[0],domain[1]]);
   }
   initDual({ domain:magExt, step:0.1, ids:{lowerRange:'magMinR',upperRange:'magMaxR',lowerNum:'magMinN',upperNum:'magMaxN'}, labelElId:'magVals', onChange:r=>{ magRange=r; requestRepaint(); }});
-  initDual({ domain:[dDomMin,dDomMax], step:10, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; requestRepaint(); }});
+  initDual({ domain:[dDomMin,dDomMax], step:1, ids:{lowerRange:'depthMinR',upperRange:'depthMaxR',lowerNum:'depthMinN',upperNum:'depthMaxN'}, labelElId:'depthVals', onChange:r=>{ depthRange=r; requestRepaint(); }});
   initDual({ domain:yearExt, step:1, ids:{lowerRange:'yearMinR',upperRange:'yearMaxR',lowerNum:'yearMinN',upperNum:'yearMaxN'}, labelElId:'yearVals', onChange:r=>{ yearRange=r; requestRepaint(); }});
 
 
