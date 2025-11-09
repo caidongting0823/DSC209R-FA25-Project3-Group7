@@ -195,6 +195,7 @@
       box-shadow:0 8px 24px rgba(0,0,0,.12);
       transform:translate(-50%,-120%);
     }
+    .tooltip .tt-grey{ color:var(--muted); }
 
     /* Buttons */
     #resetBtn{
@@ -255,6 +256,19 @@
       stroke-width:2.5px;
     }
 
+    /* Fancy tooltip layout */
+    .tooltip .tt-title{ font-weight:700; margin-bottom:4px; font-size:12.5px; }
+    .tooltip .tt-sub{ color:var(--muted); margin-left:6px }
+    .tooltip .tt-grid{
+      display:grid; grid-template-columns:auto 1fr;
+      gap:2px 10px; align-items:baseline; margin-top:4px;
+    }
+    .tooltip .tt-grid .k{ color:var(--muted) }
+    .tooltip code{
+      background:#f3f4f6; border-radius:4px; padding:1px 4px;
+    }
+
+
 </style>
 
 
@@ -276,8 +290,18 @@
           <input id="magMaxR" class="upper" type="range" step="0.1">
         </div>
         <div class="row values">
-          <div class="valuebox"><span>Min</span><input id="magMinN" type="number" step="0.1"><span></span><span>Max</span><input id="magMaxN" type="number" step="0.1"></div>
+          <div class="valuebox">
+              <span>Min</span><input id="magMinN" type="number" step="0.1"><span></span>
+              <span>Max</span><input id="magMaxN" type="number" step="0.1"></div>
         </div>
+        <div class="checkboxrow">
+            <label><input id="useMw" type="checkbox" checked> Normalize to Mw (approx)</label>
+        </div>
+
+        <div class="checkboxrow">
+            <label><input id="hideUnconverted" type="checkbox" checked>Hide non-Mw (unconverted) data (experimental)</label>
+        </div>
+
       </div>
 
       <div class="section">
@@ -363,6 +387,156 @@ const normId = v => String(v).padStart(2, "0");
     return e;
   };
 
+  // -------- Tooltip helpers --------
+  const fmtLat = (lat)=> `${Math.abs(lat).toFixed(3)}°${lat>=0?"N":"S"}`;
+  const fmtLon = (lon)=> `${Math.abs(lon).toFixed(3)}°${lon>=0?"E":"W"}`;
+
+  function magTypeShort(mt){
+    if (!mt) return "M";
+    const raw = String(mt).trim().toUpperCase();
+    if (raw.includes("TEXNET")) return "ML (TexNet)";
+    if (raw === "MLR") return "ML (revised)";
+    const k = raw.replace(/[^A-Z]/g,"");
+    const map = {
+      MW:"Mw", MWW:"Mw", MWC:"Mw", MWB:"Mw", MWR:"Mw", MWP:"Mw",
+      MS:"Ms", MB:"mb", MBLG:"mbLg", MLG:"mbLg", LG:"mbLg",
+      ML:"ML", MD:"Md", MC:"Mc", MH:"Mh", ME:"Me",
+      MA:"Ma", FA:"FA", MFA:"FA", UK:"Unknown"
+    };
+    return map[k] || raw;
+  }
+
+  function magTypeLong(mt){
+    if (!mt) return "";
+    const raw = String(mt).trim().toUpperCase();
+    if (raw.includes("TEXNET")) return "Local magnitude by TexNet (ML TexNet)";
+    if (raw === "MLR") return "Revised local magnitude (MLr)";
+    const k = raw.replace(/[^A-Z]/g,"");
+    const map = {
+      MW:"Moment magnitude (Mw)",
+      MWW:"Moment magnitude (W-phase) (Mw)",
+      MWC:"Moment magnitude (centroid/long-period) (Mw)",
+      MWB:"Moment magnitude (long-period body-wave inversion) (Mw)",
+      MWR:"Regional moment magnitude (full-waveform, regional) (Mw)",
+      MWP:"P-wave moment magnitude (MwP)",
+      MS:"Surface-wave magnitude (Ms, 20 s)",
+      MB:"Short-period body-wave magnitude (mb)",
+      MBLG:"Lg-wave regional body magnitude (mbLg/MLg)",
+      ML:"Local (Richter) magnitude (ML)",
+      MD:"Duration magnitude (Md)",
+      MC:"Coda/duration magnitude (Mc)",
+      MH:"Provisional/hand magnitude (Mh)",
+      ME:"Energy magnitude (Me)",
+      MA:"Amplitude magnitude (Ma)",
+      FA:"Felt-area magnitude (FA)",
+      MFA:"Felt-area magnitude (FA)",
+      UK:"Unknown/unspecified"
+    };
+    return map[k] || `Magnitude type (${raw})`;
+  }
+
+  // Canonicalize magnitude type variants seen in US catalogs
+  // Examples in your file: mw,mww,mwc,mwb,mwr,mwp, ml,ml(texnet),mlr, mb, ms,
+  // mblg/mb_lg/mlg/lg, md, mc, mh, ma, fa/mfa, uk
+  function canonMagType(mt){
+    if(!mt) return "";
+    let raw = String(mt).trim();
+    let s = raw.toLowerCase();
+    s = s.replace(/\(.*?\)/g, "");  // drop things like "(texnet)" for canonicalization
+    s = s.replace(/[^a-z]/g, "");   // remove underscores/dashes
+
+    // Moment family → native Mw
+    if (["mw","mww","mwc","mwb","mwr","mwp"].includes(s)) return "MW";
+
+    // Classical scales
+    if (s === "ms") return "MS";
+    if (s === "mb") return "MB";
+    if (["mblg","mlg","lg"].includes(s)) return "MBLG"; // Lg family
+    if (["ml","mlr","ma"].includes(s)) return "ML";     // ML variants; 'ma' treated as ML-like for display ONLY
+
+    // Duration/coda & other operational types
+    if (s === "md") return "MD";
+    if (s === "mc") return "MC";
+    if (s === "mh") return "MH";
+
+    // Felt-area/unknown/network
+    if (s === "fa" || s === "mfa") return "FA";
+    if (s === "uk") return "UK";
+
+    // Otherwise uppercase whatever we got
+    return s.toUpperCase();
+  }
+
+  function tooltipHTML(d){
+    const useMw   = document.getElementById("useMw").checked;
+    const mtShort = magTypeShort(d.magTypeOrig);   // show raw code nicely
+    const mOrig   = (d.mag!=null) ? `${d.mag.toFixed(1)} ${mtShort}` : "M?";
+    const mMw    = (d.magMw!=null) ? `${d.magMw.toFixed(1)} Mw` : null;
+
+    // Title + asterisks
+    let title = "", titleClass = "";
+    let notes = [];
+
+    if (useMw && d._canMw){
+      // We show Mw (converted gets a star)
+      title = d._converted ? `${mMw}*` : mMw;
+      if (d._converted) notes.push("*Approximated from " + mOrig + " using Empirical Relations.");
+    } else {
+      // Either normalization is OFF or conversion isn't possible → show original with ** and grey
+      title = (d.mag!=null) ? `${mOrig}**` : "M?";
+      titleClass = "tt-grey";
+      if (!useMw && d._canMw) {
+        notes.push("**Normalization is Off — Showing Original Reported Scale.");
+      } else if (!d._canMw) {
+        notes.push("**Not Convertible to Mw with a Robust Global Relation, Shown as Reported.");
+      }
+    }
+
+    const depthTxt= d.depth==null ? "N/A" : `${Math.round(d.depth)} km`;
+    const coords  = (isFinite(d.lat)&&isFinite(d.lon)) ? `${fmtLat(d.lat)} / ${fmtLon(d.lon)}` : "—";
+    const when    = d.time ? new Date(d.time).toUTCString().replace("GMT","UTC") : "";
+
+    return `
+      <div class="tt-title"><b class="${titleClass}">${title}</b><span class="tt-sub"> — ${displayLabel(d)}</span></div>
+      <div class="tt-grid">
+        <div class="k">Depth</div><div><b>${depthTxt}</b></div>
+        <div class="k">Lat / Lon</div><div><code>${coords}</code></div>
+        <div class="k">Original data</div><div>${mOrig}</div>
+        ${when ? `<div class="k">Date</div><div>${when}</div>` : ""}
+      </div>
+      ${notes.length ? `<div class="tt-sub" style="margin-top:6px">${notes.join("<br>")}</div>` : ""}
+    `;
+  }
+
+
+  // ---- Magnitude normalization to Mw ----
+  // Approximate cross-scale conversions to Mw (US-centric, global-ish fits).
+  // Converted values are marked with * in UI; ranges/regions matter.
+  function approxMw(mag, typeCanon){
+    if (mag == null) return null;
+    const t = (typeCanon || "").toUpperCase();
+
+    // Already Mw (moment family)
+    if (t === "MW") return mag;
+
+    // Common conversions used in US practice (rough global fits):
+    if (t === "MS")   return 0.67 * mag + 2.07;         // Ms → Mw   (~M5.5–8 shallow)
+    if (t === "MB" ||
+        t === "MBLG") return 0.85 * mag + 1.03;         // mb/mbLg → Mw (regional body/Lg)
+    if (t === "ML")   return 0.884 * mag + 0.431;       // ML → Mw   (generic local magnitude)
+
+    // Not converted: MD/MC/MH/FA/UK/… (too regional/ambiguous)
+    return null;
+  }
+
+
+
+  // Current magnitude to use for size/filter/sort depending on the toggle
+  function magVal(d){
+    return document.getElementById("useMw").checked ? (d.magMw ?? d.mag) : d.mag;
+  }
+
+
   let _raf = 0;
   function requestRepaint(){
     if (_raf) return;
@@ -425,7 +599,10 @@ function setYearUI(lo, hi){
 // Compute selections
 function storySelect(kind){
   if (kind === "top10"){
-    return points.filter(d=>isFinite(d.mag)).sort((a,b)=> d3.descending(a.mag,b.mag)).slice(0,10);
+    return points
+      .filter(d => isFinite(magVal(d)))
+      .sort((a,b) => d3.descending(magVal(a), magVal(b)))
+      .slice(0,10);
   } else if (kind === "deepest"){
     const m = d3.max(points.filter(d=>d.depth!=null), d=>d.depth);
     return points.filter(d=>d.depth!=null && d.depth===m);
@@ -441,7 +618,7 @@ function storySelect(kind){
 }
 
 // Apply a story (full data visible; highlight selection; sliders reflect bounds)
-function applyStory(kind){
+function applyStory(kind, { syncUI = true } = {}){
   storyMode = kind;
 
   // show all points (no filtering), keep current zoom
@@ -456,15 +633,17 @@ function applyStory(kind){
   // Fade others, highlight selection
   fadeAndHighlight(sel);
 
-  // Update slider UI to selection bounds (no filtering change)
-  const magLo = d3.min(sel, d=>d.mag), magHi = d3.max(sel, d=>d.mag);
-  const depLo = d3.min(sel, d=>d.depth ?? color.domain()[0]);
-  const depHi = d3.max(sel, d=>d.depth ?? color.domain()[1]);
-  const yrLo  = d3.min(sel, d=>d.year), yrHi  = d3.max(sel, d=>d.year);
+  if (syncUI){
+      // Update slider UI to selection bounds (no filtering change)
+      const magLo = d3.min(sel, d=>d.mag), magHi = d3.max(sel, d=>d.mag);
+      const depLo = d3.min(sel, d=>d.depth ?? color.domain()[0]);
+      const depHi = d3.max(sel, d=>d.depth ?? color.domain()[1]);
+      const yrLo  = d3.min(sel, d=>d.year), yrHi  = d3.max(sel, d=>d.year);
 
-  setMagUI(+magLo.toFixed(1), +magHi.toFixed(1));
-  setDepthUI(Math.round(depLo), Math.round(depHi));
-  setYearUI(yrLo, yrHi);
+      setMagUI(+magLo.toFixed(1), +magHi.toFixed(1));
+      setDepthUI(Math.round(depLo), Math.round(depHi));
+      setYearUI(yrLo, yrHi);
+  }
 }
 
 
@@ -646,9 +825,22 @@ function applyStory(kind){
     const mag   = (d.mag===""  ||d.mag==null)?null:+d.mag;
     const lat=+d.latitude, lon=+d.longitude;
     const year = d.time ? new Date(d.time).getUTCFullYear() : null;
-    return { time:d.time, year, place:d.place||"", region:d.region||"", depth, mag, lat, lon };
+    const magTypeOrig = (d.magType || d.magtype || d.mag_type || "").trim(); // raw code as-reported
+    const magType = canonMagType(magTypeOrig);
+    return { time:d.time, year, place:d.place||"", region:d.region||"", depth, mag, lat, lon, magType, magTypeOrig };
   });
   const points = data.filter(d => isFinite(d.lat) && isFinite(d.lon));
+
+  // Precompute an approximate Mw for each event (maybe null if not convertible)
+  points.forEach(d => { d.magMw = approxMw(d.mag, d.magType); });
+
+  points.forEach(d => {
+      d._nativeMw  = d.magType === "MW";   // canonical check
+      d._canMw     = d.magMw != null;      // convertible OR native
+      d._converted = d._canMw && !d._nativeMw;
+      d._shape     = d._canMw ? "circle" : "triangle";
+  });
+
 
   function cityStateFromPlace(d){
     const place = (d.place||"").trim();
@@ -787,26 +979,44 @@ function applyStory(kind){
           .attr("d", path);
 
         // 4) Quakes within that state/territory (geoContains = robust)
-        const pts = points.filter(d => passesFilters(d) && d._insetCode === ab);
-        g.selectAll("circle").data(pts).join("circle")
-          .attr("class", "quake nonScaleStroke")
-          // divide by 's' so circles keep the same *screen* size despite the group scale
-          .attr("r", d => dataRadius(d.mag, 1) / s)   // insets don't zoom with the main layer
+        const hideUnconverted = document.getElementById("hideUnconverted").checked;
+        const pts = points.filter(d =>
+          passesFilters(d) && d._insetCode === ab && (!hideUnconverted || d._canMw)
+        );
+
+
+        // Convertible/native Mw → circles
+        const ptsC = pts.filter(d => d._canMw);
+        g.selectAll("circle").data(ptsC).join("circle")
+          .attr("class","quake nonScaleStroke")
+          .attr("r", d => dataRadius(magVal(d), 1) / s)
           .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
           .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-          .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
+          .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
           .on("mousemove", (event, d) => {
             const [x,y] = d3.pointer(event, document.querySelector(".view"));
-            tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(`
-              <div><b>${(d.mag!=null?d.mag.toFixed(1):"M?")}</b> — <span style="color:var(--muted)">${displayLabel(d)}</span></div>
-              <div>Depth: <b>${d.depth==null ? "N/A" : Math.round(d.depth)+" km"}</b></div>
-              <div style="color:var(--muted)">${d.time ? new Date(d.time).toUTCString() : ""}</div>
-            `);
+            tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
+          })
+          .on("mouseleave", ()=> tooltip.style("opacity", 0));
+
+        // Not convertible → triangles (size adjusted by 1/s so screen size is stable)
+        const ptsT = pts.filter(d => !d._canMw);
+        g.selectAll("path.tri").data(ptsT).join("path")
+          .attr("class","quake tri nonScaleStroke")
+          .attr("d", d => {
+            const r = dataRadius(magVal(d), 1) / s;
+            return d3.symbol().type(d3.symbolTriangle).size(Math.PI * r * r)();
+          })
+          .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
+          .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+          .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+          .on("mousemove", (event, d) => {
+            const [x,y] = d3.pointer(event, document.querySelector(".view"));
+            tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
           })
           .on("mouseleave", ()=> tooltip.style("opacity", 0));
       });
     }
-
 
 
   /* ---------- Location entries (canonical display) ---------- */
@@ -928,7 +1138,7 @@ function applyStory(kind){
     "magMinR","magMaxR","magMinN","magMaxN",
     "depthMinR","depthMaxR","depthMinN","depthMaxN",
     "yearMinR","yearMaxR","yearMinN","yearMaxN",
-    "includeNA"
+    "includeNA","useMw","hideUnconverted"
   ].forEach(id=>{
     const el = document.getElementById(id);
     if (!el) return;
@@ -1125,7 +1335,7 @@ function applyStory(kind){
       });
 
       // N/A circle to the right of the depth bar
-      const naCx = x0 + pad + naBlockW/2; 
+      const naCx = x0 + pad + naBlockW/2;
       const naCy = y0 + 26 + depthBarH/2;
       legendG.append("circle")
         .attr("cx", naCx).attr("cy", naCy).attr("r", naR)
@@ -1166,7 +1376,8 @@ function applyStory(kind){
     }
 
   function passesFilters(d){
-    const magOK   = (d.mag  != null && d.mag  >= magRange[0]   && d.mag  <= magRange[1]);
+    const mNow = magVal(d);
+    const magOK = (mNow != null && mNow >= magRange[0] && mNow <= magRange[1]);
     const yearOK  = (d.year != null && d.year >= yearRange[0]  && d.year <= yearRange[1]);
     const depthOK = d.depth == null ? document.getElementById("includeNA").checked
                                   : (d.depth >= depthRange[0] && d.depth <= depthRange[1]);
@@ -1186,37 +1397,64 @@ function applyStory(kind){
     try{
       const allowNA = document.getElementById("includeNA").checked;
 
-      const filtered = points.filter(d => passesFilters(d) && !d._insetCode);
+      const hideUnconverted = document.getElementById("hideUnconverted").checked;
+      const filtered = points.filter(d =>
+        passesFilters(d) && !d._insetCode && (!hideUnconverted || d._canMw)
+      );
 
-      const sel = ptsG.selectAll("circle.quake").data(filtered, d => d._key);
 
 
-      sel.enter().append("circle")
+      // Circles for convertible/native Mw
+      const conv = filtered.filter(d => d._canMw);
+      const C = ptsG.selectAll("circle.quake").data(conv, d => d._key);
+
+      C.enter().append("circle")
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
-        .attr("r", d => dataRadius(d.mag))
+        .attr("r", d => dataRadius(magVal(d)))
         .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
-        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
+        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
         .on("mousemove", (event, d) => {
           const [x,y] = d3.pointer(event, document.querySelector(".view"));
-          tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(`
-            <div><b>${(d.mag!=null?d.mag.toFixed(1):"M?")}</b> — <span style="color:var(--muted)">${displayLabel(d)}</span></div>
-            <div>Depth: <b>${d.depth==null ? "N/A" : Math.round(d.depth)+" km"}</b></div>
-            <div style="color:var(--muted)">${d.time ? new Date(d.time).toUTCString() : ""}</div>
-          `);
+          tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
         })
         .on("mouseleave", ()=> tooltip.style("opacity", 0));
 
-      sel
-        .attr("r", d => dataRadius(d.mag))
+      C
+        .attr("r", d => dataRadius(magVal(d)))
         .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
         .attr("class", d => "quake" + (d.depth==null ? " nodata" : ""))
-        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(d.mag ?? magExt[0]))
-        .attr("transform", d => {
-          const p = projection([d.lon, d.lat]); return p ? `translate(${p[0]},${p[1]})` : "translate(-999,-999)";
-        });
+        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`));
 
-      sel.exit().remove();
+      C.exit().remove();
+
+      // Triangles for NOT convertible to Mw
+      const tri = filtered.filter(d => !d._canMw);
+      const T = ptsG.selectAll("path.quake.tri").data(tri, d => d._key);
+
+      T.enter().append("path")
+        .attr("class", d => "quake tri" + (d.depth==null ? " nodata" : ""))
+        .attr("d", d => d3.symbol().type(d3.symbolTriangle)
+            .size(Math.PI * Math.pow(dataRadius(magVal(d)), 2))())
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`))
+        .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .on("mousemove", (event, d) => {
+          const [x,y] = d3.pointer(event, document.querySelector(".view"));
+          tooltip.style("left",(x+12)+"px").style("top",(y-12)+"px").style("opacity",1).html(tooltipHTML(d));
+        })
+        .on("mouseleave", ()=> tooltip.style("opacity", 0));
+
+      T
+        .attr("d", d => d3.symbol().type(d3.symbolTriangle)
+            .size(Math.PI * Math.pow(dataRadius(magVal(d)), 2))())
+        .attr("fill", d => d.depth==null ? "#9aa0a6" : color(clamp(d.depth, dDomMin, dDomMax)))
+        .attr("class", d => "quake tri" + (d.depth==null ? " nodata" : ""))
+        .attr("fill-opacity", d => d.depth==null ? 0.75 : alphaScale(magVal(d) ?? magExt[0]))
+        .attr("transform", d => (d._px==null ? "translate(-999,-999)" : `translate(${d._px},${d._py})`));
+
+      T.exit().remove();
     }catch(err){
       console.error("Render error:", err); // keeps page alive
     }
@@ -1233,9 +1471,42 @@ function applyStory(kind){
   document.getElementById("discoverShallowest").addEventListener("click", ()=> applyStory("shallowest"));
   document.getElementById("discoverRecent").addEventListener("click", ()=> applyStory("recent"));
 
-  // Default landing state: Top 10 highlighted
-  applyStory("top10");
+  // // --- Magnitude normalization toggle ---
+  // document.getElementById("useMw").addEventListener("change", () => {
+  //   clearStory();            // exit story mode if active
+  //   requestRepaint();        // repaint with/without normalization
+  // });
 
+  // --- Magnitude normalization toggle (guard on uncheck) ---
+  document.getElementById("useMw").addEventListener("change", (e) => {
+    // If turning OFF normalization, double confirm
+    if (!e.target.checked){
+      const ok = confirm(
+        "Experimental: Turning OFF Mw normalization may reduce comparability across events.\n\n" +
+        "Proceed and show original reported scales?"
+      );
+      if (!ok){ e.target.checked = true; return; }
+    }
+    clearStory();
+    requestRepaint();
+  });
+
+  // --- Hide non-Mw (unconverted) data (default ON). Guard when turning it OFF (i.e., showing non-Mw).
+  document.getElementById("hideUnconverted").addEventListener("change", (e) => {
+    if (!e.target.checked){
+      const ok = confirm(
+        "Experimental: Showing non-Mw (unconverted) data mixes different magnitude scales.\n" +
+        "The plot may be less comparable across events.\n\nProceed?"
+      );
+      if (!ok){ e.target.checked = true; return; }
+    }
+    clearStory();
+    requestRepaint();
+  });
+    
+
+  // Default landing state: Top 10 highlighted, but keep sliders at full ranges
+  applyStory("top10", { syncUI: false });
 
   // ----- Reset Filters Button Logic -----
   document.getElementById("resetBtn").addEventListener("click", () => {
@@ -1267,6 +1538,9 @@ function applyStory(kind){
       if (typeof renderChips === "function") renderChips();
     }
 
+    d3.select("#useMw").property("checked", true);
+    d3.select("#hideUnconverted").property("checked", true);
+
     requestRepaint();
   });
 
@@ -1276,7 +1550,9 @@ function applyStory(kind){
     currK = ev.transform.k;
     zoomLayer.attr("transform", ev.transform);
     // Update radii so small dots keep the minimum screen size at every zoom
-    ptsG.selectAll("circle.quake").attr("r", d => dataRadius(d.mag, currK));
+    ptsG.selectAll("circle.quake").attr("r", d => dataRadius(magVal(d), currK));
+    ptsG.selectAll("path.quake.tri").attr("d", d => d3.symbol().type(d3.symbolTriangle)
+        .size(Math.PI * Math.pow(dataRadius(magVal(d), currK), 2))());
   });
 
   svg.call(zoom).on("click", (e)=>{
