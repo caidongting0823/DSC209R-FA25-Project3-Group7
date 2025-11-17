@@ -307,13 +307,73 @@
     body[data-mode="rolling"] #discoverSection { display: none; }
     body[data-mode="rolling"] #resetSection    { display: none; }
 
-    /* Mode tabs (right side of header) */
-    .mode-tabs{ margin-left:auto; display:flex; gap:6px; }
-    .mode-tabs .tab{
-      padding:6px 10px; border:1px solid var(--grid); border-radius:8px;
-      background:#f6f8fe; color:#1f2937; cursor:pointer; font-weight:600; font-size:12px;
+    /* Mode tabs – stacked cards in the sidebar */
+    .mode-tabs{
+      margin:0 0 16px 0;
+      display:grid;
+      gap:10px;
     }
-    .mode-tabs .tab.active{ background:#e6f0ff; border-color:#c7d2fe; }
+
+    .mode-row{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:stretch;
+      gap:8px;
+    }
+
+    .mode-tabs .tab{
+      padding:10px 12px;
+      border:1px solid var(--grid);
+      border-radius:12px;
+      background:#f6f8fe;
+      color:#1f2937;
+      cursor:pointer;
+      font-size:12px;
+      text-align:left;
+      display:grid;
+      gap:4px;
+      transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .1s ease;
+    }
+
+    .mode-tabs .tab:hover{
+      background:#ecf2ff;
+      transform:translateY(-1px);
+    }
+
+    .mode-tabs .tab.active{
+      background:#e6f0ff;
+      border-color:#c7d2fe;
+      box-shadow:0 0 0 1px #c7d2fe;
+    }
+
+    .mode-title{
+      font-weight:700;
+      font-size:16px;
+      letter-spacing:.02em;
+    }
+
+    .mode-desc{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+
+    /* Arrow column to the right of each mode card */
+    .mode-arrow{
+      font-size:11px;
+      color:var(--muted);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      white-space:nowrap;
+    }
+
+    .mode-arrow-icon{
+      font-size:16px;
+      line-height:1;
+    }
 
     /* Rolling controls */
     #rollingCtl{
@@ -407,9 +467,44 @@
   <aside class="sidebar">
 
     <div class="mode-tabs">
-        <button id="modeDiscover" class="tab active">Discover Mode</button>
-        <button id="modeRolling"  class="tab">Rolling Player</button>
-        <button id="modeFull"     class="tab">Full Explore</button>
+
+      <div>
+          <div class="mode-arrow">
+          <span class="mode-arrow-icon">⇩ Click to Switch Mode ⇩</span>
+        </div>
+      </div>
+
+      <div class="mode-row">
+        <button id="modeDiscover" class="tab active">
+          <div class="mode-title">Discover Mode</div>
+          <div class="mode-desc">
+              <strong>Guided “story” mode.</strong>
+              Discover curated highlights of the century, including Top 10, Deepest, Shallowest.
+          </div>
+        </button>
+      </div>
+
+      <div class="mode-row">
+        <button id="modeRolling" class="tab">
+          <div class="mode-title">Rolling Player Mode</div>
+          <div class="mode-desc">
+              <strong>Play the timeline month by month.</strong>
+              The slider and rolling feed show activity in a timeline format.
+          </div>
+        </button>
+      </div>
+
+      <div class="mode-row">
+        <button id="modeFull" class="tab">
+          <div class="mode-title">Full Explore Mode</div>
+          <div class="mode-desc">
+              <strong>Full control mode.</strong>
+              Use magnitude, depth, year, and location chips to build custom filters and compare patterns
+              across space and time.
+          </div>
+        </button>
+      </div>
+
     </div>
 
     <hr />
