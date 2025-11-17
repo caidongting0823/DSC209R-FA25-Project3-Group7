@@ -266,6 +266,73 @@
     .discover-btn:hover{ background:#ecf2ff }
     .discover-btn:active{ transform:scale(0.98) }
 
+    /* Clickable header for Discover section */
+    .discover-header-btn{
+      background:none;
+      border:none;
+      padding:0;
+      margin:0;
+      font:inherit;
+      text-align:left;
+      cursor:pointer;
+      color:var(--text);
+    }
+    .discover-header-btn:hover{
+      text-decoration:underline;
+    }
+
+    /* Side info panel for Discover the Century */
+    #discoverInfoPanel{
+      position:absolute;
+      right:16px;
+      top:80px;
+      max-width:320px;
+      z-index:30;
+      background:var(--panel);
+      border:1px solid var(--grid);
+      border-radius:12px;
+      padding:12px 14px;
+      box-shadow:0 12px 30px rgba(0,0,0,.16);
+      font-size:12.5px;
+      color:var(--text);
+      display:none;
+    }
+    #discoverInfoPanel.open{
+      display:block;
+    }
+    .side-info-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:6px;
+    }
+    .side-info-title{
+      font-weight:700;
+      font-size:15px;
+    }
+    .side-info-close{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      padding:2px 4px;
+      font-size:14px;
+      color:var(--muted);
+    }
+    .side-info-close:hover{
+      color:var(--text);
+    }
+    .side-info-body p{
+      margin:4px 0;
+    }
+    .side-info-body a{
+      color:var(--accent);
+      text-decoration:none;
+    }
+    .side-info-body a:hover{
+      text-decoration:underline;
+    }
+
     /* Temporary hide Recent & Significant Discover buttons */
     #discoverRecent,
     #discoverSignificant {
@@ -594,7 +661,11 @@
 
 
       <div class="section" id="discoverSection">
-          <div class="label">Discover the Century</div>
+          <button type="button"
+                  class="label discover-header-btn"
+                  id="discoverIntroBtn">
+            Discover the Century
+          </button>
           <div class="discover">
             <button class="discover-btn" id="discoverTop10">Top 10 Earthquakes</button>
             <button class="discover-btn" id="discoverDeepest">Deepest Earthquake</button>
@@ -625,6 +696,54 @@
     <svg id="svg" preserveAspectRatio="xMidYMid meet"></svg>
     <div class="tooltip" id="tooltip"></div>
 
+    <!-- Side info panel for Discover the Century -->
+    <div id="discoverInfoPanel">
+      <div class="side-info-header">
+        <div class="side-info-title">📳 The Shaking Alaska</div>
+        <button class="side-info-close" id="discoverInfoClose" aria-label="Close">✕</button>
+      </div>
+      <div class="side-info-body">
+        <p>
+          <strong>Alaska sits on one of the most powerful plate boundaries on Earth.</strong>
+            Along the Alaska–Aleutian subduction zone,
+            the dense Pacific Plate is constantly pushing northward and diving beneath the North American Plate at a
+            rate of a few centimeters per year. This subduction zone generates an enormous number of earthquakes at
+            all depths, from shallow “megathrust” events on the plate interface to deeper quakes within the sinking
+            slab itself. The Alaska Earthquake Center notes that subduction earthquakes there follow the Pacific Plate
+            down to depths of 200 km or more, and that three of the twelve largest earthquakes ever recorded worldwide
+            occurred in Alaska, including the 1964 Mw 9.2 Good Friday earthquake.
+        </p>
+        <p>
+          Because of this tectonic setting, Alaska completely dominates U.S. earthquake statistics.
+            The Alaska Seismic Hazards Safety Commission reports that Alaska has about 11% of the world’s recorded
+            earthquakes, and seven of the ten largest earthquakes in the United States have occurred in Alaska.
+            The USGS also describes the Alaska–Aleutian subduction system as one of the most seismically active
+            plate boundaries on the planet, producing more magnitude-8 and larger earthquakes over the last century
+            than any other subduction zone.
+            <strong>So if you look at a U.S.-only earthquake catalog for the past 100 years,
+            it’s not surprising that the national top-10 largest events, as well as many of the very deep
+                intermediate-depth quakes, cluster in Alaska.</strong>
+        </p>
+        <p>
+            <strong>At the same time, Alaska also hosts many of the shallowest events in the U.S.</strong>
+            The state has long, active
+            crustal faults like the Denali Fault and numerous faults around its volcanic arcs, which produce earthquakes
+            very close to the surface. In mountainous or offshore areas, when an earthquake is extremely shallow,
+            location uncertainties and the choice of reference surface (sea level vs. the WGS84 geoid) can even lead
+            to catalog depths reported as 0 km or slightly negative. The USGS explains that such negative depths simply
+            reflect how depth is calculated for very shallow events, not that earthquakes actually happen “in the air.”
+            Together, this combination of a deep subducting slab and very active shallow crustal faults explains why,
+            in a 100-year U.S. dataset, Alaska can host both the deepest and the very shallowest
+            (even “negative-depth”) earthquakes.</p>
+        <p>
+          <a href="https://earthquake.alaska.edu/earthquakes/about"
+             target="_blank" rel="noopener">
+            Discover more about why earthquakes happen in Alaska →
+          </a>
+        </p>
+      </div>
+    </div>
+
     <!-- Click-callout for “Significant” story (appears on dot click) -->
     <div id="callout"></div>
 
@@ -648,18 +767,27 @@ function setActiveTab(which){
 
 function setMode(m){
   if (m === mode) return;
+
+  const infoPanel = document.getElementById("discoverInfoPanel");
+  if (infoPanel) infoPanel.classList.remove("open");
+
   mode = m;
   document.body.dataset.mode = (m === "full" ? "full" : m);
-  setActiveTab(m === "discover" ? "modeDiscover" : m === "rolling" ? "modeRolling" : "modeFull");
-  clearStory();
+  setActiveTab(
+    m === "discover" ? "modeDiscover" :
+    m === "rolling"  ? "modeRolling"  :
+                       "modeFull"
+  );
+
+  if (window.clearStory) window.clearStory();
   hideCallout();
 
   if (m === "discover"){
-    resetRollingState();                          // ← NEW: fully leave rolling
-    applyStory("top10", { syncUI:false });        // default view for Discover
+    resetRollingState();
+    if (window.applyStory) window.applyStory("top10", { syncUI:false });
   } else if (m === "rolling"){
     initRollingUI();
-    stopRolling();                                // start paused; user presses ▶
+    stopRolling();
   } else if (m === "full"){
     stopRolling();
     requestRepaint();
@@ -1219,7 +1347,7 @@ document.addEventListener("click", (e)=>{ const c=document.getElementById("callo
         setYearUI(yrLo, yrHi);
     }
   }
-
+  window.applyStory = applyStory;
 
   /* ---------- State maps ---------- */
   const STATE_ABBR_TO_FULL = {
@@ -2234,6 +2362,60 @@ document.addEventListener("click", (e)=>{ const c=document.getElementById("callo
     requestRepaint();
   });
 
+  /* ---------- Discover info side popup ---------- */
+  (function(){
+    const introBtn      = document.getElementById("discoverIntroBtn");
+    const introStoryBtn = document.getElementById("discoverTop10");
+    const panel         = document.getElementById("discoverInfoPanel");
+    const closeBtn      = document.getElementById("discoverInfoClose");
+    const viewEl        = document.querySelector(".view");
+
+    if (!panel) return;
+
+    function openPanel(){
+      // Ensure we’re in Discover mode when opening
+      if (document.body.dataset.mode !== "discover"){
+        setMode("discover");
+      }
+      panel.classList.add("open");
+    }
+
+    function closePanel(){
+      panel.classList.remove("open");
+    }
+
+    if (introBtn){
+      introBtn.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        openPanel();
+      });
+    }
+
+    if (introStoryBtn){
+      introStoryBtn.addEventListener("click", () => {
+        // Story logic (applyStory) is already wired elsewhere;
+        // we just show the info panel on top.
+        panel.classList.add("open");
+      });
+    }
+
+    if (closeBtn){
+      closeBtn.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        closePanel();
+      });
+    }
+
+    // Clicking anywhere in the map view (but outside the panel) closes it
+    if (viewEl){
+      viewEl.addEventListener("click", (e)=>{
+        if (!panel.classList.contains("open")) return;
+        if (!panel.contains(e.target)) closePanel();
+      });
+    }
+  })();
 
   /* ---------- Zoom ---------- */
   const zoom = d3.zoom().scaleExtent([0.9, 8]).on("zoom", (ev)=>{
